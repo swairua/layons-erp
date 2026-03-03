@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { parseErrorMessage } from '@/utils/errorHelpers';
 import { RLSPolicyError } from '@/utils/RLSError';
-import { ensureCompanyImageColumns } from '@/utils/ensureDatabaseColumns';
+import { ensureCompanyImageColumns, ensureQuantityColumnsAreDecimal } from '@/utils/ensureDatabaseColumns';
 
 // Types
 export interface Company {

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { BoqDocument, BoqSection } from '@/utils/boqPdfGenerator';
+import { ensureQuantityColumnsAreDecimal } from '@/utils/ensureDatabaseColumns';
 
 const safeN = (v: number | undefined) => (typeof v === 'number' && !isNaN(v) ? v : 0);
 
@@ -328,6 +329,9 @@ export const useConvertBoqToInvoice = () => {
       // Create invoice items with proper validation
       if (invoiceItems.length > 0) {
         try {
+          // Ensure quantity columns support decimals (fixes INTEGER -> DECIMAL(10,3) issue)
+          await ensureQuantityColumnsAreDecimal();
+
           const itemsToInsert = invoiceItems.map((item, index) => {
             // Validate item data
             if (!item.description || item.description.trim() === '') {
@@ -337,9 +341,8 @@ export const useConvertBoqToInvoice = () => {
             return {
               invoice_id: invoice.id,
               product_id: null, // BOQ items don't map to products
-              product_name: item.description, // Use description as product name for BOQ conversions
               description: item.description,
-              quantity: item.quantity,
+              quantity: item.quantity, // DECIMAL value from BOQ
               unit_price: item.unit_price,
               line_total: item.line_total,
               unit_of_measure: item.unit_of_measure,
