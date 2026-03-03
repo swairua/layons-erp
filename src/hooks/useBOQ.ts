@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { BoqDocument, BoqSection } from '@/utils/boqPdfGenerator';
+import { ensureQuantityColumnsAreDecimal } from '@/utils/ensureDatabaseColumns';
 
 const safeN = (v: number | undefined) => (typeof v === 'number' && !isNaN(v) ? v : 0);
 
@@ -334,14 +335,30 @@ export const useConvertBoqToInvoice = () => {
               throw new Error(`Item ${index + 1} has missing description`);
             }
 
+            // TEMPORARY WORKAROUND: Round quantities to integers
+            // Database column is INTEGER instead of DECIMAL(10,3)
+            // This preserves decimal values in line_total which carries the actual amounts
+            const roundedQuantity = Math.round(item.quantity);
+
+            // Log warning if we're losing precision
+            if (item.quantity !== roundedQuantity) {
+              console.warn(
+                `Item "${item.description}": Quantity rounded from ${item.quantity} to ${roundedQuantity} due to database schema limitation`,
+                {
+                  original: item.quantity,
+                  rounded: roundedQuantity,
+                  difference: item.quantity - roundedQuantity
+                }
+              );
+            }
+
             return {
               invoice_id: invoice.id,
               product_id: null, // BOQ items don't map to products
-              product_name: item.description, // Use description as product name for BOQ conversions
               description: item.description,
-              quantity: item.quantity,
+              quantity: roundedQuantity, // Round to integer to match INTEGER column
               unit_price: item.unit_price,
-              line_total: item.line_total,
+              line_total: item.line_total, // This preserves the actual total with decimals
               unit_of_measure: item.unit_of_measure,
               discount_percentage: 0,
               sort_order: index
