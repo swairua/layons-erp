@@ -3647,7 +3647,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       paid_amount: invoice.paid_amount || 0,
       balance_due: invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)),
       notes: invoice.notes,
-      terms_and_conditions: invoice.terms_and_conditions,
+      terms_and_conditions: invoice.terms_and_conditions || company?.default_terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
       project_title: projectTitle || undefined,
@@ -3676,7 +3676,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       paid_amount: invoice.paid_amount || 0,
       balance_due: invoice.balance_due || (invoice.total_amount - (invoice.paid_amount || 0)),
       notes: invoice.notes,
-      terms_and_conditions: invoice.terms_and_conditions,
+      terms_and_conditions: invoice.terms_and_conditions || company?.default_terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
       project_title: projectTitle || undefined,

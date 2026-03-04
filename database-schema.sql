@@ -20,6 +20,7 @@ CREATE TABLE companies (
     logo_url TEXT,
     currency VARCHAR(3) DEFAULT 'KES',
     fiscal_year_start INTEGER DEFAULT 1, -- January = 1
+    default_terms_and_conditions TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
