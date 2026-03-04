@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+console.log('📄 Invoices.tsx module evaluation started');
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
