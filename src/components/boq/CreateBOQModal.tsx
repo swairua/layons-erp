@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Calculator, Layers } from 'lucide-react';
+import { Plus, Trash2, Calculator, Layers, Check } from 'lucide-react';
 import { useCompanies, useCustomers, useUnits, useBOQs } from '@/hooks/useDatabase';
 import { CreateUnitModal } from '@/components/units/CreateUnitModal';
 import { toast } from 'sonner';
@@ -31,6 +31,7 @@ import { downloadBOQPDF, BoqDocument } from '@/utils/boqPdfGenerator';
 import { generateNextBOQNumber } from '@/utils/boqNumberGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface CreateBOQModalProps {
   open: boolean;
@@ -104,6 +105,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
   const [unitModalOpen, setUnitModalOpen] = useState(false);
   const [pendingUnitTarget, setPendingUnitTarget] = useState<{ sectionId: string; itemId: string } | null>(null);
   const [previewItem, setPreviewItem] = useState<{ sectionId: string; subsectionId: string; itemId: string } | null>(null);
+  const [draftSaved, setDraftSaved] = useState(false);
 
   const todayISO = new Date().toISOString().split('T')[0];
   const defaultNumber = useMemo(() => {
@@ -158,6 +160,77 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
       fetchPreviousTerms();
     }
   }, [open, currentCompany?.id, previousTermsLoaded]);
+
+  // Load draft from localStorage when modal opens
+  useEffect(() => {
+    if (open) {
+      try {
+        const savedDraft = localStorage.getItem('boq_draft');
+        if (savedDraft) {
+          const draft = JSON.parse(savedDraft);
+          setBoqNumber(draft.boqNumber || boqNumber);
+          setBoqDate(draft.boqDate || boqDate);
+          setDueDate(draft.dueDate || dueDate);
+          setClientId(draft.clientId || '');
+          setProjectTitle(draft.projectTitle || '');
+          setContractor(draft.contractor || '');
+          setNotes(draft.notes || '');
+          setTermsAndConditions(draft.termsAndConditions || termsAndConditions);
+          setShowCalculatedValuesInTerms(draft.showCalculatedValuesInTerms || false);
+          setCurrency(draft.currency || currency);
+          setSections(draft.sections || sections);
+        }
+      } catch (err) {
+        console.log('Failed to load draft:', err);
+      }
+    }
+  }, [open]);
+
+  // Create debounced autosave function
+  const debouncedAutoSave = useDebounce((formData: any) => {
+    try {
+      localStorage.setItem('boq_draft', JSON.stringify(formData));
+      setDraftSaved(true);
+      // Hide "Draft saved" indicator after 2 seconds
+      setTimeout(() => setDraftSaved(false), 2000);
+    } catch (err) {
+      console.log('Failed to save draft:', err);
+    }
+  }, 2000);
+
+  // Autosave whenever form state changes
+  useEffect(() => {
+    if (open) {
+      const formData = {
+        boqNumber,
+        boqDate,
+        dueDate,
+        clientId,
+        projectTitle,
+        contractor,
+        notes,
+        termsAndConditions,
+        showCalculatedValuesInTerms,
+        currency,
+        sections,
+      };
+      debouncedAutoSave(formData);
+    }
+  }, [
+    open,
+    boqNumber,
+    boqDate,
+    dueDate,
+    clientId,
+    projectTitle,
+    contractor,
+    notes,
+    termsAndConditions,
+    showCalculatedValuesInTerms,
+    currency,
+    sections,
+    debouncedAutoSave,
+  ]);
 
   const selectedClient = useMemo(() => customers.find(c => c.id === clientId), [customers, clientId]);
 
@@ -403,6 +476,8 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
       } : undefined);
 
       toast.success(`BOQ ${boqNumber} generated and saved`);
+      // Clear draft from localStorage
+      localStorage.removeItem('boq_draft');
       onSuccess?.();
       handleOpenChange(false);
     } catch (err) {
@@ -420,14 +495,41 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
     onOpenChange(newOpen);
   };
 
+  const handleClearForm = () => {
+    // Reset all form fields to default values
+    setBoqNumber(defaultNumber);
+    setBoqDate(todayISO);
+    setDueDate(todayISO);
+    setClientId('');
+    setProjectTitle('');
+    setContractor('');
+    setNotes('');
+    setTermsAndConditions(DEFAULT_TERMS_AND_CONDITIONS);
+    setShowCalculatedValuesInTerms(false);
+    setCurrency(currentCompany?.currency || 'KES');
+    setSections([defaultSection()]);
+    // Clear draft from localStorage
+    localStorage.removeItem('boq_draft');
+    setDraftSaved(false);
+    toast.success('Form cleared');
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="w-[95vw] max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Layers className="h-5 w-5 text-primary" />
-            <span>Create Bill of Quantities</span>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center space-x-2">
+              <Layers className="h-5 w-5 text-primary" />
+              <span>Create Bill of Quantities</span>
+            </DialogTitle>
+            {draftSaved && (
+              <div className="flex items-center space-x-2 text-green-600">
+                <Check className="h-4 w-4" />
+                <span className="text-sm font-medium">Draft saved</span>
+              </div>
+            )}
+          </div>
           <DialogDescription>
             Build a detailed BOQ, save it to the database and download a branded PDF.
           </DialogDescription>
@@ -664,12 +766,17 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
           </div>
         </div>
 
-        <DialogFooter className="mt-6">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleGenerate} disabled={submitting}>
-            <Calculator className="h-4 w-4 mr-2" />
-            {submitting ? 'Generating...' : 'Download BOQ PDF'}
+        <DialogFooter className="mt-6 flex justify-between">
+          <Button variant="destructive" onClick={handleClearForm}>
+            Clear Form
           </Button>
+          <div className="space-x-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={handleGenerate} disabled={submitting}>
+              <Calculator className="h-4 w-4 mr-2" />
+              {submitting ? 'Generating...' : 'Download BOQ PDF'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
