@@ -24,6 +24,7 @@ export interface Company {
   fiscal_year_start?: number;
   tax_settings?: TaxSetting[];
   company_services?: string;
+  default_terms_and_conditions?: string;
   created_at?: string;
   updated_at?: string;
 }

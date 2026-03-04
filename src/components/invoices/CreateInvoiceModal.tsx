@@ -110,11 +110,19 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     }
   }, [preSelectedCustomer, open]);
 
-  // Load previous invoice's terms and conditions when modal opens
+  // Load company default terms, or previous invoice's terms when modal opens
   useEffect(() => {
     if (open && currentCompany?.id && !previousTermsLoaded) {
-      const fetchPreviousTerms = async () => {
+      const fetchTerms = async () => {
         try {
+          // First, try to use company's default terms
+          if (currentCompany.default_terms_and_conditions) {
+            setTermsAndConditions(currentCompany.default_terms_and_conditions);
+            setPreviousTermsLoaded(true);
+            return;
+          }
+
+          // Fall back to previous invoice's terms
           const { data, error } = await supabase
             .from('invoices')
             .select('terms_and_conditions')
@@ -133,9 +141,9 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         }
       };
 
-      fetchPreviousTerms();
+      fetchTerms();
     }
-  }, [open, currentCompany?.id, previousTermsLoaded]);
+  }, [open, currentCompany?.id, currentCompany?.default_terms_and_conditions, previousTermsLoaded]);
 
   const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
