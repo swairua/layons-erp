@@ -5,6 +5,7 @@ import { PDF_PAGE_CSS } from './pdfMarginConstants';
 import { formatCurrency as formatCurrencyUtil } from './currencyFormatter';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { getProjectTitleFromInvoice } from './boqInvoiceLinkage';
 
 // Helper function to render HTML content to canvas
 const renderHTMLToCanvas = async (htmlContent: string, pageSelector: string) => {
@@ -3540,10 +3541,24 @@ export const generatePDF = async (data: DocumentData) => {
 };
 
 // Specific function for invoice PDF generation
-export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' | 'PROFORMA' = 'INVOICE', company?: CompanyDetails) => {
+export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' | 'PROFORMA' = 'INVOICE', company?: CompanyDetails, companyId?: string) => {
   console.log('🎯 downloadInvoicePDF called for:', invoice.invoice_number);
   console.log('📊 Raw invoice_items count:', invoice.invoice_items?.length || 0);
   console.log('📊 Raw invoice_items:', invoice.invoice_items);
+
+  // Fetch project title from BOQ if this invoice was converted from a BOQ
+  let projectTitle: string | null = null;
+  if (companyId) {
+    try {
+      projectTitle = await getProjectTitleFromInvoice(invoice, companyId);
+      if (projectTitle) {
+        console.log('✅ Found project title from BOQ:', projectTitle);
+      }
+    } catch (err) {
+      console.warn('⚠️ Failed to fetch project title from BOQ:', err);
+      // Continue without project title - not a critical error
+    }
+  }
 
   const items = invoice.invoice_items?.map((item: any) => {
     const quantity = Number(item.quantity || 0);
@@ -3635,6 +3650,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       terms_and_conditions: invoice.terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
+      project_title: projectTitle || undefined,
     };
   } else {
     documentData = {
@@ -3663,6 +3679,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       terms_and_conditions: invoice.terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
+      project_title: projectTitle || undefined,
     };
   }
 
