@@ -121,7 +121,12 @@ export default function BOQs() {
         toast.error('BOQ data is not available');
         return;
       }
-      await downloadBOQPDF(boq.data, currentCompany ? {
+      // Ensure project_title from the BOQ row is used in the document data
+      const boqData = {
+        ...boq.data,
+        project_title: boq.project_title || boq.data.project_title
+      };
+      await downloadBOQPDF(boqData, currentCompany ? {
         name: currentCompany.name,
         address: currentCompany.address || undefined,
         city: currentCompany.city || undefined,

@@ -3635,6 +3635,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       terms_and_conditions: invoice.terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
+      project_title: invoice.lpo_number,
     };
   } else {
     documentData = {
@@ -3663,6 +3664,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       terms_and_conditions: invoice.terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
+      project_title: invoice.lpo_number,
     };
   }
 
