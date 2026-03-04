@@ -78,6 +78,10 @@ interface Invoice {
   status: 'draft' | 'sent' | 'paid' | 'partial' | 'overdue';
   invoice_items?: any[];
   currency?: string;
+  terms_and_conditions?: string;
+  notes?: string;
+  subtotal?: number;
+  tax_amount?: number;
 }
 
 function getStatusColor(status: string) {
