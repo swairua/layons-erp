@@ -428,7 +428,7 @@ export default function Invoices() {
         company_services: currentCompany.company_services
       } : undefined;
 
-      await downloadInvoicePDF(enrichedInvoice, 'INVOICE', companyDetails);
+      await downloadInvoicePDF(enrichedInvoice, 'INVOICE', companyDetails, currentCompany?.id);
       toast.success(`Invoice ${invoice.invoice_number} PDF downloaded`);
     } catch (error) {
       console.error('Error downloading PDF:', error);
