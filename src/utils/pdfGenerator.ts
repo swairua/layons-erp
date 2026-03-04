@@ -3608,9 +3608,6 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       };
     });
 
-    // Use LPO number or customer name as project identifier for filename
-    const projectTitle = invoice.lpo_number || invoice.customers?.name;
-
     documentData = {
       type: documentType === 'PROFORMA' ? 'proforma' : 'invoice',
       number: invoice.invoice_number,
@@ -3638,12 +3635,9 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       terms_and_conditions: invoice.terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
-      project_title: projectTitle,
+      project_title: invoice.lpo_number,
     };
   } else {
-    // Use LPO number or customer name as project identifier for filename
-    const projectTitle = invoice.lpo_number || invoice.customers?.name;
-
     documentData = {
       type: documentType === 'PROFORMA' ? 'proforma' : 'invoice',
       number: invoice.invoice_number,
@@ -3670,7 +3664,7 @@ export const downloadInvoicePDF = async (invoice: any, documentType: 'INVOICE' |
       terms_and_conditions: invoice.terms_and_conditions,
       showCalculatedValuesInTerms: false, // Never show calculated values in invoice terms
       customTitle: 'INVOICE',
-      project_title: projectTitle,
+      project_title: invoice.lpo_number,
     };
   }
 
@@ -3737,8 +3731,6 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
       };
     });
 
-    const projectTitle = quotation.customers?.name;
-
     documentData = {
       type: 'quotation',
       number: quotation.quotation_number,
@@ -3761,11 +3753,8 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
       total_amount: quotation.total_amount,
       notes: quotation.notes,
       terms_and_conditions: quotation.terms_and_conditions,
-      project_title: projectTitle,
     };
   } else {
-    const projectTitle = quotation.customers?.name;
-
     documentData = {
       type: 'quotation',
       number: quotation.quotation_number,
@@ -3787,7 +3776,6 @@ export const downloadQuotationPDF = async (quotation: any, company?: CompanyDeta
       total_amount: quotation.total_amount,
       notes: quotation.notes,
       terms_and_conditions: quotation.terms_and_conditions,
-      project_title: projectTitle,
     };
   }
 
