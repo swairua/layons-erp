@@ -411,6 +411,26 @@ export default function Invoices() {
         enrichedInvoice = { ...invoice, invoice_items: items || [] };
       }
 
+      // Fetch previous invoice terms if current invoice has no terms
+      if (!enrichedInvoice.terms_and_conditions && currentCompany?.id) {
+        console.log('⚠️ No terms found for invoice, fetching from previous invoice...');
+        const { data, error } = await supabase
+          .from('invoices')
+          .select('terms_and_conditions')
+          .eq('company_id', currentCompany.id)
+          .not('terms_and_conditions', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!error && data?.terms_and_conditions) {
+          console.log('✅ Previous invoice terms fetched');
+          enrichedInvoice = { ...enrichedInvoice, terms_and_conditions: data.terms_and_conditions };
+        } else {
+          console.log('ℹ️ No previous invoice terms found');
+        }
+      }
+
       console.log('📦 Final invoice items for PDF:', enrichedInvoice.invoice_items?.length || 0);
 
       // Get current company details for PDF
