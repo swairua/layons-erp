@@ -504,6 +504,7 @@ interface CompanyDetails {
   logo_url?: string;
   header_image?: string;
   stamp_image?: string;
+  default_terms_and_conditions?: string;
 }
 
 // Default company details (fallback) - logo will be determined dynamically
@@ -1243,43 +1244,13 @@ export const generatePDF = async (data: DocumentData) => {
         <!-- Terms Section -->
         <div style="margin-bottom: 8px;">
           <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 4px; margin-top: 0; text-transform: uppercase;">Terms;</h3>
-          ${data.terms_and_conditions ? `
+          ${(data.terms_and_conditions || company.default_terms_and_conditions) ? `
             <div style="font-size: 11px; line-height: 1.4; margin: 0; padding: 0; color: #000;">
-              ${parseAndRenderTerms(data.terms_and_conditions, grandTotalForBOQ, data.showCalculatedValuesInTerms !== false, formatCurrency)}
+              ${parseAndRenderTerms(data.terms_and_conditions || company.default_terms_and_conditions, grandTotalForBOQ, data.showCalculatedValuesInTerms !== false, formatCurrency)}
             </div>
           ` : `
             <div style="font-size: 11px; line-height: 1.4; margin: 0; padding: 0; color: #000;">
-              <div style="display: flex; margin-bottom: 4px; align-items: flex-start;">
-                <span style="margin-right: 8px; flex-shrink: 0;">1.</span>
-                <div style="flex: 1;">
-                  <div style="margin-bottom: 2px;">Payment terms for each stage are as follows:</div>
-                  <div style="margin: 2px 0 2px 20px;">
-                    <div style="margin-bottom: 2px;">i. 50% Upon Order${data.showCalculatedValuesInTerms !== false ? ` (${formatCurrency(grandTotalForBOQ * 0.5)})` : ''}</div>
-                    <div style="margin-bottom: 2px;">ii. 40% As Progressive${data.showCalculatedValuesInTerms !== false ? ` (${formatCurrency(grandTotalForBOQ * 0.4)})` : ''}</div>
-                    <div style="margin-bottom: 2px;">iii. 10% Upon Completion${data.showCalculatedValuesInTerms !== false ? ` (${formatCurrency(grandTotalForBOQ * 0.1)})` : ''}</div>
-                  </div>
-                </div>
-              </div>
-              <div style="display: flex; margin-bottom: 4px;">
-                <span style="margin-right: 8px; flex-shrink: 0;">2.</span>
-                <div style="flex: 1;">All work will be executed based on the drawings and samples approved by the client</div>
-              </div>
-              <div style="display: flex; margin-bottom: 4px;">
-                <span style="margin-right: 8px; flex-shrink: 0;">3.</span>
-                <div style="flex: 1;">Any Changes/alterations to the scope of work outlined will affect the final quantity will be measured, and charges will be applied on a pro-rata basis at the agreed rate</div>
-              </div>
-              <div style="display: flex; margin-bottom: 4px;">
-                <span style="margin-right: 8px; flex-shrink: 0;">4.</span>
-                <div style="flex: 1;">We are not responsible for any damages caused by negligence from other Sub Contractors Hired by the Client.</div>
-              </div>
-              <div style="display: flex; margin-bottom: 4px;">
-                <span style="margin-right: 8px; flex-shrink: 0;">5.</span>
-                <div style="flex: 1;">The quotation does not include statutory fees.</div>
-              </div>
-              <div style="display: flex;">
-                <span style="margin-right: 8px; flex-shrink: 0;">6.</span>
-                <div style="flex: 1;">The work shall be completed within weeks from the day of Order.</div>
-              </div>
+              <p style="margin: 0; color: #666;">No terms and conditions specified.</p>
             </div>
           `}
         </div>
@@ -1981,20 +1952,13 @@ export const generatePDF = async (data: DocumentData) => {
           <!-- Terms Section -->
           <div style="margin-bottom: 15px;">
             <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Terms;</h3>
-            <ol style="font-size: 11px; line-height: 1.6; margin: 0; padding-left: 20px; color: #000;">
-              <li style="margin-bottom: 6px;">Payment terms:
-                <ul style="display: block; width: 100%; clear: both; font-size: 11px; line-height: 1.6; margin: 12px 0 6px 0; padding-left: 40px; color: #000; list-style-type: none;">
-                  <li style="margin-bottom: 4px;">50% Advance,</li>
-                  <li style="margin-bottom: 4px;">40% Upon commencement,</li>
-                  <li style="margin-bottom: 4px;">10% Upon completion</li>
-                </ul>
-              </li>
-              <li style="margin-bottom: 6px;">Validity: This quotation is valid for 7 days from the date of issue.</li>
-              <li style="margin-bottom: 6px;">Warranty: As per contract terms and conditions.</li>
-              <li style="margin-bottom: 6px;">Scope of Work: As detailed in the specifications and drawings.</li>
-              <li style="margin-bottom: 6px;">General: Excludes site supervision, public liability insurance, and other items not mentioned.</li>
-              <li style="margin-bottom: 6px;">Acceptance of Quote: Acceptance is confirmed when the client signs both copies of this document and returns one copy to us</li>
-            </ol>
+            ${(data.terms_and_conditions || company.default_terms_and_conditions) ? `
+              <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
+                ${parseAndRenderTerms(data.terms_and_conditions || company.default_terms_and_conditions, data.total_amount, false, formatCurrency)}
+              </div>
+            ` : `
+              <p style="font-size: 11px; margin: 0; color: #666;">No terms and conditions specified.</p>
+            `}
           </div>
 
           <!-- Acceptance of Quote Section -->
@@ -3399,25 +3363,12 @@ export const generatePDF = async (data: DocumentData) => {
           <!-- Terms Section -->
           <div style="margin-bottom: 15px;">
             <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Terms;</h3>
-            ${data.terms_and_conditions ? `
+            ${(data.terms_and_conditions || company.default_terms_and_conditions) ? `
               <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
-                ${parseAndRenderTerms(data.terms_and_conditions, data.total_amount || 0, false, formatCurrency)}
+                ${parseAndRenderTerms(data.terms_and_conditions || company.default_terms_and_conditions, data.total_amount || 0, false, formatCurrency)}
               </div>
             ` : `
-              <ol style="font-size: 11px; line-height: 1.6; margin: 0; padding-left: 20px; color: #000;">
-                <li style="margin-bottom: 6px;">Payment terms:
-                  <ul style="display: block; width: 100%; clear: both; font-size: 11px; line-height: 1.6; margin: 12px 0 6px 0; padding-left: 40px; color: #000; list-style-type: none;">
-                    <li style="margin-bottom: 4px;">50% Advance,</li>
-                    <li style="margin-bottom: 4px;">40% Upon commencement,</li>
-                    <li style="margin-bottom: 4px;">10% Upon completion</li>
-                  </ul>
-                </li>
-                <li style="margin-bottom: 6px;">Validity: This quotation is valid for 7 days from the date of issue.</li>
-                <li style="margin-bottom: 6px;">Warranty: As per contract terms and conditions.</li>
-                <li style="margin-bottom: 6px;">Scope of Work: As detailed in the specifications and drawings.</li>
-                <li style="margin-bottom: 6px;">General: Excludes site supervision, public liability insurance, and other items not mentioned.</li>
-                <li style="margin-bottom: 6px;">Acceptance of Quote: Acceptance is confirmed when the client signs both copies of this document and returns one copy to us</li>
-              </ol>
+              <p style="font-size: 11px; margin: 0; color: #666;">No terms and conditions specified.</p>
             `}
           </div>
 
