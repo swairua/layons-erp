@@ -161,9 +161,9 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
     }
   }, [open, currentCompany?.id, previousTermsLoaded]);
 
-  // Load draft from localStorage when modal opens
+  // Load draft from localStorage when modal opens (after previous terms are loaded)
   useEffect(() => {
-    if (open) {
+    if (open && previousTermsLoaded) {
       try {
         const savedDraft = localStorage.getItem('boq_draft');
         if (savedDraft) {
@@ -184,7 +184,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
         console.log('Failed to load draft:', err);
       }
     }
-  }, [open]);
+  }, [open, previousTermsLoaded]);
 
   // Create debounced autosave function
   const debouncedAutoSave = useDebounce((formData: any) => {
