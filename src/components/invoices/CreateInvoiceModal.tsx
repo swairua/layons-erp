@@ -80,6 +80,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
+  const [showCalculatedValuesInTerms, setShowCalculatedValuesInTerms] = useState(false);
   const [previousTermsLoaded, setPreviousTermsLoaded] = useState(false);
 
   const [sections, setSections] = useState<InvoiceSection[]>([]);
@@ -665,6 +666,16 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                     onChange={(e) => setTermsAndConditions(e.target.value)}
                     rows={3}
                   />
+                  <div className="flex items-center space-x-2 mt-3">
+                    <Checkbox
+                      id="showCalculatedValues"
+                      checked={showCalculatedValuesInTerms}
+                      onCheckedChange={(checked) => setShowCalculatedValuesInTerms(checked === true)}
+                    />
+                    <Label htmlFor="showCalculatedValues" className="font-normal cursor-pointer">
+                      Show calculated values (e.g., 50% (KES 50,000))
+                    </Label>
+                  </div>
                 </div>
               </CardContent>
             </Card>
