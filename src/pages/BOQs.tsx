@@ -41,6 +41,26 @@ export default function BOQs() {
   const [dueDateToFilter, setDueDateToFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'overdue' | 'aging' | 'current'>('all');
 
+  // Hooks and context calls first
+  const { currentCompany } = useCurrentCompany();
+  const { profile } = useAuth();
+  const companyId = currentCompany?.id;
+  const { data: boqs = [], isLoading, refetch: refetchBOQs } = useBOQs(companyId);
+  const { useAuditedDeleteBOQ } = useAuditedDeleteOperations();
+  const deleteBOQ = useAuditedDeleteBOQ(companyId || '');
+  const { data: units = [] } = useUnits(companyId);
+  const { logDelete } = useAuditLog();
+  const convertToInvoice = useConvertBoqToInvoice();
+
+  // State declarations
+  const [viewing, setViewing] = useState<any | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string }>({ open: false });
+  const [convertDialog, setConvertDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string }>({ open: false });
+  const [draftExists, setDraftExists] = useState(false);
+  const [draftLastSaved, setDraftLastSaved] = useState<string | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
   // Set status filter from URL params
   useEffect(() => {
     const dueStatus = searchParams.get('dueStatus');
@@ -67,24 +87,6 @@ export default function BOQs() {
 
     checkForDraft();
   }, [companyId, profile?.id]);
-
-  const { currentCompany } = useCurrentCompany();
-  const companyId = currentCompany?.id;
-  const { data: boqs = [], isLoading, refetch: refetchBOQs } = useBOQs(companyId);
-  const { useAuditedDeleteBOQ } = useAuditedDeleteOperations();
-  const deleteBOQ = useAuditedDeleteBOQ(companyId || '');
-  const { data: units = [] } = useUnits(companyId);
-  const { logDelete } = useAuditLog();
-
-  const [viewing, setViewing] = useState<any | null>(null);
-  const [editing, setEditing] = useState<any | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string }>({ open: false });
-  const [convertDialog, setConvertDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string }>({ open: false });
-  const [draftExists, setDraftExists] = useState(false);
-  const [draftLastSaved, setDraftLastSaved] = useState<string | null>(null);
-  const [showDraftBanner, setShowDraftBanner] = useState(false);
-  const convertToInvoice = useConvertBoqToInvoice();
-  const { profile } = useAuth();
 
   // Categorize BOQs by due date status
   const categorizeBOQ = (boq: any) => {
