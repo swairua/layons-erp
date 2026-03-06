@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
 import { usePagination } from '@/hooks/usePagination';
-import { Layers, Plus, Eye, Download, Trash2, Copy, Pencil, FileText, Filter, Search, AlertCircle, Clock, CheckCircle } from 'lucide-react';
+import { Layers, Plus, Eye, Download, Trash2, Copy, Pencil, FileText, Filter, Search, AlertCircle, Clock, CheckCircle, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CreateBOQModal } from '@/components/boq/CreateBOQModal';
 import { CreatePercentageCopyModal } from '@/components/boq/CreatePercentageCopyModal';
@@ -18,10 +18,12 @@ import { BOQConversionFix } from '@/components/boq/BOQConversionFix';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useBOQs, useUnits } from '@/hooks/useDatabase';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { useAuditedDeleteOperations } from '@/hooks/useAuditedDeleteOperations';
 import { useConvertBoqToInvoice } from '@/hooks/useBOQ';
+import { loadBoqDraft, deleteDraft } from '@/services/boqAutoSaveService';
 import { downloadBOQPDF } from '@/utils/boqPdfGenerator';
 import { generateUniqueInvoiceNumber } from '@/utils/invoiceNumberGenerator';
 import { toast } from 'sonner';
@@ -46,6 +48,26 @@ export default function BOQs() {
       setStatusFilter(dueStatus as 'overdue' | 'aging' | 'current');
     }
   }, [searchParams]);
+
+  // Check for unsaved draft when company changes
+  useEffect(() => {
+    const checkForDraft = async () => {
+      if (companyId && profile?.id) {
+        const draft = await loadBoqDraft(profile.id, companyId);
+        if (draft) {
+          setDraftExists(true);
+          setDraftLastSaved(draft.last_autosaved_at);
+          setShowDraftBanner(true);
+        } else {
+          setDraftExists(false);
+          setShowDraftBanner(false);
+        }
+      }
+    };
+
+    checkForDraft();
+  }, [companyId, profile?.id]);
+
   const { currentCompany } = useCurrentCompany();
   const companyId = currentCompany?.id;
   const { data: boqs = [], isLoading, refetch: refetchBOQs } = useBOQs(companyId);
@@ -58,7 +80,11 @@ export default function BOQs() {
   const [editing, setEditing] = useState<any | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string }>({ open: false });
   const [convertDialog, setConvertDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string }>({ open: false });
+  const [draftExists, setDraftExists] = useState(false);
+  const [draftLastSaved, setDraftLastSaved] = useState<string | null>(null);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
   const convertToInvoice = useConvertBoqToInvoice();
+  const { profile } = useAuth();
 
   // Categorize BOQs by due date status
   const categorizeBOQ = (boq: any) => {
@@ -109,6 +135,20 @@ export default function BOQs() {
     setDueDateToFilter('');
     setStatusFilter('all');
     toast.success('Filters cleared');
+  };
+
+  const handleResetDraft = async () => {
+    if (profile?.id && companyId) {
+      const result = await deleteDraft(profile.id, companyId);
+      if (result.success) {
+        setDraftExists(false);
+        setShowDraftBanner(false);
+        setDraftLastSaved(null);
+        toast.success('Draft reset successfully');
+      } else {
+        toast.error('Failed to reset draft');
+      }
+    }
   };
 
   // Pagination hook
@@ -334,6 +374,52 @@ export default function BOQs() {
           </Button>
         </div>
       </div>
+
+      {showDraftBanner && draftExists && (
+        <Card className="border-blue-200 bg-blue-50 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">You have an unsaved BOQ in progress</p>
+                  <p className="text-sm text-blue-700">
+                    Last saved: {draftLastSaved ? new Date(draftLastSaved).toLocaleString() : 'just now'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setOpen(true);
+                    setShowDraftBanner(false);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Continue Editing
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleResetDraft}
+                  className="border-blue-200 hover:bg-blue-100"
+                >
+                  Reset Draft
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => setShowDraftBanner(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {schemaError && (
         <BOQConversionFix />
