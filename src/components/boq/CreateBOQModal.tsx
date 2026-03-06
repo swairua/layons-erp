@@ -32,6 +32,7 @@ import { generateNextBOQNumber } from '@/utils/boqNumberGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
+import { saveBoqDraft, loadBoqDraft, deleteDraft } from '@/services/boqAutoSaveService';
 
 interface CreateBOQModalProps {
   open: boolean;
@@ -97,6 +98,8 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
   const [pendingUnitTarget, setPendingUnitTarget] = useState<{ sectionId: string; itemId: string } | null>(null);
   const [previewItem, setPreviewItem] = useState<{ sectionId: string; subsectionId: string; itemId: string } | null>(null);
   const [draftSaved, setDraftSaved] = useState(false);
+  const [lastAutosavedAt, setLastAutosavedAt] = useState<string | null>(null);
+  const [draftLoaded, setDraftLoaded] = useState(false);
 
   const todayISO = new Date().toISOString().split('T')[0];
   const defaultNumber = useMemo(() => {
@@ -160,38 +163,68 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
     }
   }, [open, currentCompany?.id, currentCompany?.default_terms_and_conditions, previousTermsLoaded]);
 
-  // Load draft from localStorage when modal opens (after previous terms are loaded)
+  // Load draft from database when modal opens (after previous terms are loaded)
   useEffect(() => {
-    if (open && previousTermsLoaded) {
-      try {
-        const savedDraft = localStorage.getItem('boq_draft');
-        if (savedDraft) {
-          const draft = JSON.parse(savedDraft);
-          setBoqNumber(draft.boqNumber || boqNumber);
-          setBoqDate(draft.boqDate || boqDate);
-          setDueDate(draft.dueDate || dueDate);
-          setClientId(draft.clientId || '');
-          setProjectTitle(draft.projectTitle || '');
-          setContractor(draft.contractor || '');
-          setNotes(draft.notes || '');
-          setTermsAndConditions(draft.termsAndConditions || termsAndConditions);
-          setShowCalculatedValuesInTerms(draft.showCalculatedValuesInTerms || false);
-          setCurrency(draft.currency || currency);
-          setSections(draft.sections || sections);
+    if (open && previousTermsLoaded && !draftLoaded && currentCompany?.id && profile?.id) {
+      const loadDraft = async () => {
+        try {
+          const draft = await loadBoqDraft(profile.id, currentCompany.id);
+          if (draft && draft.data) {
+            setBoqNumber(draft.number || defaultNumber);
+            setBoqDate(draft.boq_date || boqDate);
+            setDueDate(draft.due_date || dueDate);
+            setClientId(draft.customer_id || '');
+            setProjectTitle(draft.project_title || '');
+            setContractor(draft.contractor || '');
+            setNotes(draft.data?.notes || '');
+            setTermsAndConditions(draft.terms_and_conditions || termsAndConditions);
+            setShowCalculatedValuesInTerms(draft.show_calculated_values_in_terms || false);
+            setCurrency(draft.currency || currency);
+            setSections(draft.data?.sections || sections);
+            setLastAutosavedAt(draft.last_autosaved_at || null);
+          }
+        } catch (err) {
+          console.log('Failed to load draft:', err);
         }
-      } catch (err) {
-        console.log('Failed to load draft:', err);
-      }
+        setDraftLoaded(true);
+      };
+
+      loadDraft();
     }
-  }, [open, previousTermsLoaded]);
+  }, [open, previousTermsLoaded, draftLoaded, currentCompany?.id, profile?.id]);
 
   // Create debounced autosave function
-  const debouncedAutoSave = useDebounce((formData: any) => {
+  const debouncedAutoSave = useDebounce(async (formData: any) => {
+    if (!currentCompany?.id || !profile?.id) return;
+
     try {
-      localStorage.setItem('boq_draft', JSON.stringify(formData));
-      setDraftSaved(true);
-      // Hide "Draft saved" indicator after 2 seconds
-      setTimeout(() => setDraftSaved(false), 2000);
+      const selectedCustomer = customers.find(c => c.id === formData.clientId);
+      const result = await saveBoqDraft(profile.id, currentCompany.id, {
+        boqNumber: formData.boqNumber,
+        boqDate: formData.boqDate,
+        dueDate: formData.dueDate,
+        clientId: formData.clientId,
+        customerName: selectedCustomer?.name,
+        customerEmail: selectedCustomer?.email,
+        customerPhone: selectedCustomer?.phone,
+        customerAddress: selectedCustomer?.address,
+        customerCity: selectedCustomer?.city,
+        customerCountry: selectedCustomer?.country,
+        projectTitle: formData.projectTitle,
+        contractor: formData.contractor,
+        notes: formData.notes,
+        termsAndConditions: formData.termsAndConditions,
+        showCalculatedValuesInTerms: formData.showCalculatedValuesInTerms,
+        currency: formData.currency,
+        sections: formData.sections,
+      });
+
+      if (result.success) {
+        setDraftSaved(true);
+        setLastAutosavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        // Hide "Draft saved" indicator after 2 seconds
+        setTimeout(() => setDraftSaved(false), 2000);
+      }
     } catch (err) {
       console.log('Failed to save draft:', err);
     }
@@ -475,8 +508,10 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
       } : undefined);
 
       toast.success(`BOQ ${boqNumber} generated and saved`);
-      // Clear draft from localStorage
-      localStorage.removeItem('boq_draft');
+      // Clear draft from database
+      if (profile?.id && currentCompany?.id) {
+        await deleteDraft(profile.id, currentCompany.id);
+      }
       onSuccess?.();
       handleOpenChange(false);
     } catch (err) {
@@ -490,11 +525,12 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setPreviousTermsLoaded(false);
+      setDraftLoaded(false);
     }
     onOpenChange(newOpen);
   };
 
-  const handleClearForm = () => {
+  const handleClearForm = async () => {
     // Reset all form fields to default values
     setBoqNumber(defaultNumber);
     setBoqDate(todayISO);
@@ -507,10 +543,20 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
     setShowCalculatedValuesInTerms(false);
     setCurrency(currentCompany?.currency || 'KES');
     setSections([defaultSection()]);
-    // Clear draft from localStorage
-    localStorage.removeItem('boq_draft');
+    setLastAutosavedAt(null);
+
+    // Clear draft from database
+    if (profile?.id && currentCompany?.id) {
+      const result = await deleteDraft(profile.id, currentCompany.id);
+      if (result.success) {
+        toast.success('Form cleared and draft reset');
+      } else {
+        toast.error('Failed to clear draft');
+      }
+    } else {
+      toast.success('Form cleared');
+    }
     setDraftSaved(false);
-    toast.success('Form cleared');
   };
 
   return (
@@ -518,16 +564,28 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
       <DialogContent className="w-[95vw] max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center space-x-2">
-              <Layers className="h-5 w-5 text-primary" />
-              <span>Create Bill of Quantities</span>
-            </DialogTitle>
-            {draftSaved && (
-              <div className="flex items-center space-x-2 text-green-600">
-                <Check className="h-4 w-4" />
-                <span className="text-sm font-medium">Draft saved</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-4">
+              <DialogTitle className="flex items-center space-x-2">
+                <Layers className="h-5 w-5 text-primary" />
+                <span>Create Bill of Quantities</span>
+              </DialogTitle>
+              {lastAutosavedAt && (
+                <span className="text-xs text-gray-500">In Progress - Saved at {lastAutosavedAt}</span>
+              )}
+            </div>
+            <div className="flex items-center space-x-4">
+              {draftSaved && (
+                <div className="flex items-center space-x-2 text-green-600">
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm font-medium">Autosaving...</span>
+                </div>
+              )}
+              {lastAutosavedAt && (
+                <Button variant="outline" size="sm" onClick={handleClearForm}>
+                  Reset Draft
+                </Button>
+              )}
+            </div>
           </div>
           <DialogDescription>
             Build a detailed BOQ, save it to the database and download a branded PDF.
