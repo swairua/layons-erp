@@ -248,7 +248,12 @@ export const useCompanies = () => {
     queryFn: async () => {
       // Ensure company image columns exist in the database
       // This handles the case where migrations haven't been applied yet
-      await ensureCompanyImageColumns();
+      try {
+        await ensureCompanyImageColumns();
+      } catch (err) {
+        // If column ensure fails, continue anyway - the columns might already exist
+        console.warn('Could not ensure company image columns, continuing...', err);
+      }
 
       const { data, error } = await supabase
         .from('companies')
