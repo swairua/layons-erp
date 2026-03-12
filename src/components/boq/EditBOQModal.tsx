@@ -121,7 +121,8 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
       // Use top-level terms_and_conditions as source of truth; fallback to nested only as safety
       const termsToUse = boq.terms_and_conditions || boqData.terms_and_conditions || '';
       setTermsAndConditions(termsToUse);
-      // Load showCalculatedValuesInTerms from top-level column if available, otherwise from nested data
+      // Load show_calculated_values_in_terms from top-level column if available, otherwise from nested data
+      // Use snake_case column name to match database schema (migration 20250314)
       const showCalcValues = boq.show_calculated_values_in_terms !== undefined
         ? boq.show_calculated_values_in_terms
         : (boqData.showCalculatedValuesInTerms || false);

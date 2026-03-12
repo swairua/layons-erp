@@ -55,6 +55,19 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
   // Flatten items and auto-calc amounts; prefix section titles and subsection titles as bold rows
   const flatItems: Array<{ description: string; quantity: number; unit_price: number; line_total: number; unit_of_measure?: string; _isSectionHeader?: boolean }> = [];
 
+  console.log('📊 BOQ PDF Generation - Input:', {
+    boqNumber: doc.number,
+    sectionsCount: doc.sections?.length || 0,
+    sections: doc.sections?.map((s, i) => ({
+      index: i,
+      title: s.title,
+      hasSubsections: !!s.subsections && s.subsections.length > 0,
+      subsectionCount: s.subsections?.length || 0,
+      hasLegacyItems: !!s.items && s.items.length > 0,
+      legacyItemCount: s.items?.length || 0,
+    }))
+  });
+
   doc.sections.forEach((section, sectionIndex) => {
     if (section.title) {
       const sectionLetter = String.fromCharCode(65 + sectionIndex); // A, B, C, etc.
@@ -148,6 +161,18 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
   });
 
   const subtotal = flatItems.reduce((s, r) => s + (r.line_total || 0), 0);
+
+  console.log('📋 BOQ PDF - Flattened Items:', {
+    totalItems: flatItems.length,
+    subtotal: subtotal,
+    items: flatItems.map(it => ({
+      description: it.description.substring(0, 50),
+      qty: it.quantity,
+      rate: it.unit_price,
+      total: it.line_total,
+      isHeader: it._isSectionHeader
+    }))
+  });
 
   // Apply customizations if provided
   const multiplier = options?.amountMultiplier ?? 1;
