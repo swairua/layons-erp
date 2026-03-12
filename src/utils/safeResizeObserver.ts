@@ -10,37 +10,57 @@ export class SafeResizeObserver {
   private isObserving = false;
   private debounceMs: number;
   private callback: SafeResizeObserverCallback;
+  private lastEntries: ResizeObserverEntry[] | null = null;
 
   constructor(callback: SafeResizeObserverCallback, debounceMs = 250) {
     this.callback = callback;
     this.debounceMs = debounceMs;
-    
+
     try {
+      // Suppress any ResizeObserver errors during creation by wrapping with error handling
       this.observer = new ResizeObserver((entries) => {
         this.handleResize(entries);
       });
     } catch (error) {
-      console.debug('ResizeObserver not supported, falling back gracefully');
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('ResizeObserver not supported, falling back gracefully');
+      }
       this.observer = null;
     }
   }
 
   private handleResize = (entries: ResizeObserverEntry[]) => {
+    // Store entries reference to prevent mutation issues
+    this.lastEntries = entries;
+
     // Clear any pending callback
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
     }
 
     // Debounce the callback to prevent loops
+    // Use a longer debounce to ensure layout stabilization
     this.timeoutId = setTimeout(() => {
       try {
+        if (!this.lastEntries) return;
+
         // Use requestAnimationFrame to ensure we're not in a layout cycle
         requestAnimationFrame(() => {
-          this.callback(entries);
+          try {
+            if (this.lastEntries) {
+              this.callback(this.lastEntries);
+            }
+          } catch (err) {
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('SafeResizeObserver callback error:', err);
+            }
+          }
         });
       } catch (error) {
         // Silently handle errors to prevent console spam
-        console.debug('ResizeObserver callback error:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('SafeResizeObserver error:', error);
+        }
       }
     }, this.debounceMs);
   };
@@ -52,7 +72,9 @@ export class SafeResizeObserver {
       this.observer.observe(target);
       this.isObserving = true;
     } catch (error) {
-      console.debug('Failed to observe element:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Failed to observe element:', error);
+      }
     }
   }
 
@@ -63,7 +85,9 @@ export class SafeResizeObserver {
       this.observer.unobserve(target);
       this.isObserving = false;
     } catch (error) {
-      console.debug('Failed to unobserve element:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Failed to unobserve element:', error);
+      }
     }
   }
 
@@ -73,7 +97,9 @@ export class SafeResizeObserver {
         this.observer.disconnect();
         this.isObserving = false;
       } catch (error) {
-        console.debug('Failed to disconnect observer:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Failed to disconnect observer:', error);
+        }
       }
     }
 
@@ -81,6 +107,8 @@ export class SafeResizeObserver {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
     }
+
+    this.lastEntries = null;
   }
 }
 
