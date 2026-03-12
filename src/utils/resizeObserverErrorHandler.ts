@@ -9,21 +9,30 @@ const initializeErrorSuppression = () => {
 
   // Immediate suppression setup
   const isResizeObserverError = (message: any) => {
-    return typeof message === 'string' && (
-      message.includes('ResizeObserver loop completed with undelivered notifications') ||
-      message.includes('ResizeObserver loop limit exceeded') ||
-      message.includes('ResizeObserver')
-    );
+    const messageStr = typeof message === 'string' ? message : String(message?.message || message);
+    return messageStr.includes('ResizeObserver loop completed with undelivered notifications') ||
+      messageStr.includes('ResizeObserver loop limit exceeded') ||
+      messageStr.includes('ResizeObserver');
   };
 
   // Override console.error immediately
   const originalConsoleError = window.console.error;
   window.console.error = (...args) => {
-    if (isResizeObserverError(args[0])) {
+    if (args.length > 0 && isResizeObserverError(args[0])) {
       // Silently ignore ResizeObserver errors
       return;
     }
     originalConsoleError.apply(console, args);
+  };
+
+  // Override console.warn as well
+  const originalConsoleWarn = window.console.warn;
+  window.console.warn = (...args) => {
+    if (args.length > 0 && isResizeObserverError(args[0])) {
+      // Silently ignore ResizeObserver warnings
+      return;
+    }
+    originalConsoleWarn.apply(console, args);
   };
 
   // Override window.onerror immediately
@@ -38,9 +47,9 @@ const initializeErrorSuppression = () => {
     return false;
   };
 
-  // Handle error events
+  // Handle error events (capture phase to intercept early)
   window.addEventListener('error', (event) => {
-    if (isResizeObserverError(event.message)) {
+    if (isResizeObserverError(event.message) || isResizeObserverError(event.error)) {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();

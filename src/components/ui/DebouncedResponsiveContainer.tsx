@@ -19,24 +19,29 @@ export const DebouncedResponsiveContainer: React.FC<DebouncedResponsiveContainer
   const [shouldRender, setShouldRender] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout>();
   const containerRef = useRef<HTMLDivElement>(null);
-  const observerRef = useRef<ResizeObserver>();
+  const observerRef = useRef<ResizeObserver | null>(null);
   const lastSizeRef = useRef({ width: 0, height: 0 });
   const isObservingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   // Debounced callback to handle resize
   const handleResize = useCallback((entries: ResizeObserverEntry[]) => {
+    if (!isMountedRef.current) return;
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
     timeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+
       try {
         const entry = entries[0];
         if (entry) {
           const { width: newWidth, height: newHeight } = entry.contentRect;
 
           // Only update if size actually changed significantly (prevents micro-adjustments)
-          const threshold = 1;
+          const threshold = 2;
           const widthChanged = Math.abs(newWidth - lastSizeRef.current.width) > threshold;
           const heightChanged = Math.abs(newHeight - lastSizeRef.current.height) > threshold;
 
@@ -47,16 +52,34 @@ export const DebouncedResponsiveContainer: React.FC<DebouncedResponsiveContainer
         }
       } catch (error) {
         // Silently handle any ResizeObserver errors
-        console.debug('ResizeObserver error handled:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('ResizeObserver error handled:', error);
+        }
       }
     }, debounceMs);
   }, [debounceMs]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // Initial render
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        setShouldRender(true);
+      }
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || isObservingRef.current) return;
 
     try {
       // Create a more robust resize observer with error handling
+      // The key is to not cause layout thrashing
       observerRef.current = new ResizeObserver((entries) => {
         // Use requestAnimationFrame to prevent synchronous layout thrashing
         requestAnimationFrame(() => {
@@ -68,13 +91,20 @@ export const DebouncedResponsiveContainer: React.FC<DebouncedResponsiveContainer
       isObservingRef.current = true;
     } catch (error) {
       // Fallback to simple timeout-based rendering
-      console.debug('ResizeObserver creation failed, using fallback:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('ResizeObserver creation failed, using fallback:', error);
+      }
       setShouldRender(true);
     }
 
     return () => {
       if (observerRef.current) {
-        observerRef.current.disconnect();
+        try {
+          observerRef.current.disconnect();
+        } catch (e) {
+          // Ignore errors during disconnect
+        }
+        observerRef.current = null;
         isObservingRef.current = false;
       }
       if (timeoutRef.current) {
@@ -83,13 +113,10 @@ export const DebouncedResponsiveContainer: React.FC<DebouncedResponsiveContainer
     };
   }, [handleResize]);
 
-  // Initial render with fallback
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShouldRender(true);
-    }, 100);
-
-    return () => clearTimeout(timer);
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   return (
