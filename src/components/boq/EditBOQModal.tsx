@@ -118,15 +118,12 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
       setProjectTitle(boqData.project_title || '');
       setContractor(boqData.contractor || '');
       setNotes(boqData.notes || '');
-      // Use nested terms_and_conditions as primary source (most complete and authoritative)
-      // The nested data is the source of truth stored in EditBOQModal; fallback to top-level only if nested is missing
-      const termsToUse = boqData.terms_and_conditions || boq.terms_and_conditions || '';
+      // Use ONLY top-level terms_and_conditions as source of truth (single source)
+      // Nested data should NOT be used for terms - top-level columns are authoritative
+      const termsToUse = boq.terms_and_conditions || '';
       setTermsAndConditions(termsToUse);
-      // Load show_calculated_values_in_terms from top-level column if available, otherwise from nested data
-      // Use snake_case column name to match database schema (migration 20250314)
-      const showCalcValues = boq.show_calculated_values_in_terms !== undefined
-        ? boq.show_calculated_values_in_terms
-        : (boqData.showCalculatedValuesInTerms || false);
+      // Use ONLY top-level show_calculated_values_in_terms (snake_case per migration 20250314)
+      const showCalcValues = boq.show_calculated_values_in_terms || false;
       setShowCalculatedValuesInTerms(showCalcValues);
       setCurrency(boqData.currency || 'KES');
 
@@ -341,8 +338,8 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
           }))
         })),
         notes: notes || undefined,
-        terms_and_conditions: termsAndConditions || undefined,
-        showCalculatedValuesInTerms: showCalculatedValuesInTerms,
+        // NOTE: Do NOT save terms to nested data - save only to top-level columns
+        // This ensures single source of truth for terms_and_conditions and show_calculated_values_in_terms
       };
 
       const payload = {
