@@ -1613,6 +1613,8 @@ export const generatePDF = async (data: DocumentData) => {
       const termsElement = boqWrapper.querySelector('.terms-page') as HTMLElement;
       if (termsElement) {
         console.log('Rendering terms and conditions...');
+
+        // Render the terms element to canvas with full height to capture all content
         const termsCanvas = await html2canvas(termsElement, {
           scale: 2,
           backgroundColor: '#ffffff',
@@ -1633,31 +1635,62 @@ export const generatePDF = async (data: DocumentData) => {
           }
         });
 
-        // Add a fresh page for terms (always add new page)
-        pdf.addPage();
-
-        // Add terms to the new page
+        // Convert canvas to image data
         const imgTermsData = termsCanvas.toDataURL('image/png');
         const imgTermsWidth = contentWidth; // Content width 180mm (210mm - 30mm margins)
         const imgTermsHeight = (termsCanvas.height * imgTermsWidth) / termsCanvas.width;
-        let termsHeightLeft = imgTermsHeight;
-        let termsPosition = 0;
-        let firstTermsPage = true;
 
-        // Add terms content to PDF
-        while (termsHeightLeft >= 0) {
-          if (!firstTermsPage) {
+        // Calculate page boundaries
+        const pageContentHeight = pageHeight - (margin * 2); // Full available height for content
+        const pixelsPerMm = termsCanvas.height / (termsElement.scrollHeight > 0 ? termsElement.scrollHeight : 100);
+
+        // Add terms across multiple pages if needed
+        let currentPageY = 0;
+        let isFirstPage = true;
+
+        while (currentPageY < imgTermsHeight) {
+          if (!isFirstPage) {
             pdf.addPage();
+          } else {
+            pdf.addPage(); // Add initial page for terms
           }
-          pdf.addImage(imgTermsData, 'PNG', margin, margin - termsPosition, imgTermsWidth, imgTermsHeight);
-          termsHeightLeft -= (pageHeight - (margin * 2) - 8); // Account for margins and spacing
-          termsPosition += pageHeight;
-          firstTermsPage = false;
 
-          if (termsHeightLeft > 0) {
-            // Proper spacing before next page
+          // Calculate how much content fits on this page
+          const remainingHeight = imgTermsHeight - currentPageY;
+          const heightOnThisPage = Math.min(pageContentHeight, remainingHeight);
+
+          // Calculate the source crop region for html2canvas output
+          const srcHeightPixels = (heightOnThisPage / imgTermsHeight) * termsCanvas.height;
+          const srcStartPixels = (currentPageY / imgTermsHeight) * termsCanvas.height;
+
+          // Create a temporary canvas to hold the cropped portion
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = termsCanvas.width;
+          tempCanvas.height = srcHeightPixels;
+
+          const tempCtx = tempCanvas.getContext('2d');
+          if (tempCtx) {
+            // Copy the relevant portion of the original canvas
+            tempCtx.drawImage(
+              termsCanvas,
+              0, srcStartPixels,                    // Source position
+              termsCanvas.width, srcHeightPixels,   // Source size
+              0, 0,                                 // Destination position
+              termsCanvas.width, srcHeightPixels    // Destination size
+            );
+
+            // Convert cropped canvas to image
+            const croppedImageData = tempCanvas.toDataURL('image/png');
+
+            // Add cropped image to PDF
+            pdf.addImage(croppedImageData, 'PNG', margin, margin, imgTermsWidth, heightOnThisPage);
           }
+
+          currentPageY += heightOnThisPage;
+          isFirstPage = false;
         }
+
+        console.log(`Terms content rendered across ${Math.ceil(imgTermsHeight / pageContentHeight)} page(s)`);
       } else {
         console.log('Terms page section not included (customTitle may be set)');
       }
