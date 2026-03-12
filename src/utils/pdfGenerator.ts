@@ -1211,7 +1211,7 @@ export const generatePDF = async (data: DocumentData) => {
     </head>
     <body${data.customTitle === 'INVOICE' ? ' class="special-invoice"' : ''}>
       <!-- Page 1: BOQ Details -->
-      <div class="boq-main">
+      <div class="boq-main page">
         <div class="container">
           ${generatePDFHeader(headerImage, company, companyServices, { ...data, project_title: boqProject }, formatDateLong, documentTitle)}
 
@@ -1244,7 +1244,7 @@ export const generatePDF = async (data: DocumentData) => {
       </div>
 
       <!-- Page 2: Terms and Conditions -->
-      <div class="terms-page">
+      <div class="terms-page page">
         <!-- Terms Section (only shown if terms are provided) -->
         ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
         <div style="margin-bottom: 8px;">
@@ -1617,8 +1617,10 @@ export const generatePDF = async (data: DocumentData) => {
       const termsElement = boqWrapper.querySelector('.terms-page') as HTMLElement;
       if (termsElement) {
         console.log('Rendering terms and conditions...');
+        console.log('Terms element scroll height:', termsElement.scrollHeight, 'offset height:', termsElement.offsetHeight);
 
-        // Render the terms element to canvas with full height to capture all content
+        // Render the terms element to canvas with a very large height to capture all content
+        // html2canvas will only render what's actually there, so this ensures nothing is cut off
         const termsCanvas = await html2canvas(termsElement, {
           scale: 2,
           backgroundColor: '#ffffff',
@@ -1627,17 +1629,13 @@ export const generatePDF = async (data: DocumentData) => {
           useCORS: true,
           imageTimeout: 15000,
           timeout: 45000,
-          windowHeight: Math.max(termsElement.scrollHeight, termsElement.offsetHeight) || 1000,
-          windowWidth: contentWidth * 3.779527559, // 180mm to pixels
+          windowHeight: 5000, // Use very large height to ensure all content is captured
+          windowWidth: contentWidth * 3.779527559, // Match the container width (180mm)
           proxy: undefined,
-          foreignObjectRendering: false,
-          onclone: (clonedDocument) => {
-            // Ensure CSS page breaks are respected during rendering
-            const style = clonedDocument.createElement('style');
-            style.textContent = '@media print { * { page-break-inside: avoid !important; } }';
-            clonedDocument.head.appendChild(style);
-          }
+          foreignObjectRendering: false
         });
+
+        console.log('Terms canvas dimensions:', termsCanvas.width, 'x', termsCanvas.height);
 
         // Convert canvas to image data
         const imgTermsData = termsCanvas.toDataURL('image/png');
@@ -1714,9 +1712,6 @@ export const generatePDF = async (data: DocumentData) => {
       // Clean up
       if (boqWrapper && boqWrapper.parentNode) {
         boqWrapper.parentNode.removeChild(boqWrapper);
-      }
-      if (termsWrapper && termsWrapper.parentNode) {
-        termsWrapper.parentNode.removeChild(termsWrapper);
       }
     }
   }
