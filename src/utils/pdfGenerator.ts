@@ -1945,21 +1945,15 @@ export const generatePDF = async (data: DocumentData) => {
       <div class="page">
         <div style="padding: 8px;">
 
-          <!-- Terms Section -->
+          <!-- Terms Section (only shown if terms are provided) -->
+          ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
           <div style="margin-bottom: 15px;">
             <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Terms;</h3>
-            ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
-              <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
-                ${parseAndRenderTerms(data.terms_and_conditions, data.total_amount, false, formatCurrency)}
-              </div>
-            ` : (company.default_terms_and_conditions && company.default_terms_and_conditions.trim()) ? `
-              <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
-                ${parseAndRenderTerms(company.default_terms_and_conditions, data.total_amount, false, formatCurrency)}
-              </div>
-            ` : `
-              <p style="font-size: 11px; margin: 0; color: #666;">No terms and conditions specified.</p>
-            `}
+            <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
+              ${parseAndRenderTerms(data.terms_and_conditions, data.total_amount, false, formatCurrency)}
+            </div>
           </div>
+          ` : ''}
 
           <!-- Acceptance of Quote Section -->
           <div style="margin-bottom: 12px; padding-top: 8px;">
