@@ -128,38 +128,17 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
     }
   }, [open, defaultNumber, todayISO]);
 
-  // Load company default terms, or previous BOQ's terms when modal opens
+  // Load company default terms when modal opens
   useEffect(() => {
     if (open && currentCompany?.id && !previousTermsLoaded) {
-      const fetchTerms = async () => {
-        try {
-          // First, try to use company's default terms
-          if (currentCompany.default_terms_and_conditions) {
-            setTermsAndConditions(currentCompany.default_terms_and_conditions);
-            setPreviousTermsLoaded(true);
-            return;
-          }
-
-          // Fall back to previous BOQ's terms
-          const { data, error } = await supabase
-            .from('boqs')
-            .select('terms_and_conditions')
-            .eq('company_id', currentCompany.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (!error && data?.terms_and_conditions) {
-            setTermsAndConditions(data.terms_and_conditions);
-          }
-          setPreviousTermsLoaded(true);
-        } catch (err) {
-          console.log('No previous BOQ found or error fetching terms:', err);
-          setPreviousTermsLoaded(true);
-        }
-      };
-
-      fetchTerms();
+      // Use company's default terms if available
+      if (currentCompany.default_terms_and_conditions) {
+        setTermsAndConditions(currentCompany.default_terms_and_conditions);
+      } else {
+        // Otherwise start with blank terms
+        setTermsAndConditions('');
+      }
+      setPreviousTermsLoaded(true);
     }
   }, [open, currentCompany?.id, currentCompany?.default_terms_and_conditions, previousTermsLoaded]);
 
@@ -486,6 +465,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
         attachment_url: null,
         data: doc,
         terms_and_conditions: termsAndConditions || null,
+        show_calculated_values_in_terms: showCalculatedValuesInTerms,
         created_by: profile?.id || null,
       };
 
