@@ -163,7 +163,12 @@ export default function BOQs() {
         toast.error('BOQ data is not available');
         return;
       }
-      await downloadBOQPDF(boq.data, currentCompany ? {
+      // Merge top-level terms_and_conditions into data to ensure saved terms are used
+      const boqDataWithTerms = {
+        ...boq.data,
+        terms_and_conditions: boq.terms_and_conditions || boq.data?.terms_and_conditions
+      };
+      await downloadBOQPDF(boqDataWithTerms, currentCompany ? {
         name: currentCompany.name,
         address: currentCompany.address || undefined,
         city: currentCompany.city || undefined,
