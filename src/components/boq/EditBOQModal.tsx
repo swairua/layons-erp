@@ -118,7 +118,9 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
       setProjectTitle(boqData.project_title || '');
       setContractor(boqData.contractor || '');
       setNotes(boqData.notes || '');
-      setTermsAndConditions(boq.terms_and_conditions || boqData.terms_and_conditions || '');
+      // Use top-level terms_and_conditions as source of truth; fallback to nested only as safety
+      const termsToUse = boq.terms_and_conditions || boqData.terms_and_conditions || '';
+      setTermsAndConditions(termsToUse);
       setCurrency(boqData.currency || 'KES');
 
       const clientIdFromBoq = customers.find(c => c.name === boq.client_name)?.id;
