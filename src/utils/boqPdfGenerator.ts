@@ -53,7 +53,7 @@ export interface BoqPdfOptions {
 
 export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string; logo_url?: string; address?: string; city?: string; country?: string; phone?: string; email?: string }, options?: BoqPdfOptions) {
   // Flatten items and auto-calc amounts; prefix section titles and subsection titles as bold rows
-  const flatItems: Array<{ description: string; quantity: number; unit_price: number; line_total: number; unit_of_measure?: string; _isSectionHeader?: boolean }> = [];
+  const flatItems: Array<{ description: string; quantity: number; unit_price: number; line_total: number; unit_of_measure?: string; unit_abbreviation?: string; _isSectionHeader?: boolean; _isSubtotal?: boolean; _isSectionTotal?: boolean }> = [];
 
   console.log('📊 BOQ PDF Generation - Input:', {
     boqNumber: doc.number,
@@ -76,7 +76,11 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
         quantity: 0,
         unit_price: 0,
         line_total: 0,
-        _isSectionHeader: true
+        unit_of_measure: undefined,
+        unit_abbreviation: undefined,
+        _isSectionHeader: true,
+        _isSubtotal: false,
+        _isSectionTotal: false
       });
     }
 
@@ -98,7 +102,11 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
             quantity: 0,
             unit_price: 0,
             line_total: 0,
-            _isSectionHeader: true
+            unit_of_measure: undefined,
+            unit_abbreviation: undefined,
+            _isSectionHeader: true,
+            _isSubtotal: false,
+            _isSectionTotal: false
           });
 
           // Add items for this subsection
@@ -113,6 +121,9 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
               line_total: amount,
               unit_of_measure: it.unit_name || it.unit || 'Item',
               unit_abbreviation: (it.unit_abbreviation || ''),
+              _isSectionHeader: false,
+              _isSubtotal: false,
+              _isSectionTotal: false
             });
           });
 
@@ -122,7 +133,11 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
             quantity: 0,
             unit_price: 0,
             line_total: subsectionTotal,
-            _isSubtotal: true
+            unit_of_measure: undefined,
+            unit_abbreviation: undefined,
+            _isSectionHeader: false,
+            _isSubtotal: true,
+            _isSectionTotal: false
           });
         }
       });
@@ -140,6 +155,10 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
         quantity: 0,
         unit_price: 0,
         line_total: sectionTotal,
+        unit_of_measure: undefined,
+        unit_abbreviation: undefined,
+        _isSectionHeader: false,
+        _isSubtotal: false,
         _isSectionTotal: true
       });
     } else if (section.items && section.items.length > 0) {
@@ -155,6 +174,9 @@ export async function downloadBOQPDF(doc: BoqDocument, company?: { name: string;
           line_total: amount,
           unit_of_measure: it.unit_name || it.unit || 'Item',
           unit_abbreviation: (it.unit_abbreviation || ''),
+          _isSectionHeader: false,
+          _isSubtotal: false,
+          _isSectionTotal: false
         });
       });
     }
