@@ -486,6 +486,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
         attachment_url: null,
         data: doc,
         terms_and_conditions: termsAndConditions || null,
+        show_calculated_values_in_terms: showCalculatedValuesInTerms,
         created_by: profile?.id || null,
       };
 

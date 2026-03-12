@@ -182,6 +182,10 @@ export default function BOQs() {
       // Use top-level terms_and_conditions as source of truth (matching EditBOQModal behavior at line 122)
       const boqData = boqToUse.data ? { ...boqToUse.data } : {};
       const termsToUse = boqToUse.terms_and_conditions || boqData.terms_and_conditions || '';
+      // Use top-level show_calculated_values_in_terms as source of truth, fallback to nested value
+      const showCalculatedValues = boqToUse.show_calculated_values_in_terms !== undefined
+        ? boqToUse.show_calculated_values_in_terms
+        : (boqData.showCalculatedValuesInTerms || false);
       const boqDataForPdf = {
         ...boqData,
         number: boqToUse.number,
@@ -196,6 +200,7 @@ export default function BOQs() {
           country: boqToUse.client_country || undefined,
         },
         terms_and_conditions: termsToUse,
+        showCalculatedValuesInTerms: showCalculatedValues,
         contractor: boqToUse.data?.contractor,
         project_title: boqToUse.project_title || boqToUse.data?.project_title,
         notes: boqToUse.data?.notes,
