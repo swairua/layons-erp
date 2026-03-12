@@ -24,7 +24,6 @@ import { useAuditLog } from '@/hooks/useAuditLog';
 import { useAuditedDeleteOperations } from '@/hooks/useAuditedDeleteOperations';
 import { useConvertBoqToInvoice } from '@/hooks/useBOQ';
 import { loadBoqDraft, deleteDraft } from '@/services/boqAutoSaveService';
-import { downloadBOQPDF } from '@/utils/boqPdfGenerator';
 import { generateUniqueInvoiceNumber } from '@/utils/invoiceNumberGenerator';
 import { toast } from 'sonner';
 import SEO from '@/components/SEO';
@@ -114,10 +113,11 @@ export default function BOQs() {
 
   // Filter and search logic
   const filteredBOQs = boqs.filter(boq => {
-    // Search filter
+    // Search filter (guard against undefined/null values)
+    const search = searchTerm.toLowerCase();
     const matchesSearch =
-      boq.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      boq.client_name.toLowerCase().includes(searchTerm.toLowerCase());
+      String(boq.number || '').toLowerCase().includes(search) ||
+      String(boq.client_name || '').toLowerCase().includes(search);
 
     // Due date filter
     const dueDate = boq.due_date ? new Date(boq.due_date) : null;
@@ -234,6 +234,8 @@ export default function BOQs() {
         hasTerms: !!boqDataForPdf.terms_and_conditions,
         termsLength: boqDataForPdf.terms_and_conditions?.length || 0,
       });
+      // Lazy import PDF generator to avoid loading browser-only libraries at module level
+      const { downloadBOQPDF } = await import('@/utils/boqPdfGenerator');
       await downloadBOQPDF(boqDataForPdf, currentCompany ? {
         name: currentCompany.name,
         address: currentCompany.address || undefined,

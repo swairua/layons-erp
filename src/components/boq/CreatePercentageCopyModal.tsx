@@ -109,8 +109,9 @@ export function CreatePercentageCopyModal({
         return;
       }
 
+      const origAmount = Number(originalBOQ.total_amount ?? 0);
       toast.success(
-        `BOQ copy created: ${newBoqNumber} (${percentage}% of original: ${originalBOQ.total_amount.toFixed(2)})`
+        `BOQ copy created: ${newBoqNumber} (${percentage}% of original: ${origAmount.toFixed(2)})`
       );
       onOpenChange(false);
       onSuccess?.();
