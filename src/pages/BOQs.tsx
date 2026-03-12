@@ -164,6 +164,8 @@ export default function BOQs() {
         return;
       }
       // Reconstruct the document using top-level BOQ fields for critical data like terms
+      // Use top-level terms as primary source, but fallback to nested terms for legacy BOQs
+      const termsToUse = boq.terms_and_conditions || boq.data?.terms_and_conditions;
       const boqData = {
         ...boq.data,
         number: boq.number,
@@ -177,7 +179,7 @@ export default function BOQs() {
           city: boq.client_city || undefined,
           country: boq.client_country || undefined,
         },
-        terms_and_conditions: boq.terms_and_conditions,
+        terms_and_conditions: termsToUse,
         contractor: boq.data?.contractor,
         project_title: boq.project_title || boq.data?.project_title,
         notes: boq.data?.notes,
