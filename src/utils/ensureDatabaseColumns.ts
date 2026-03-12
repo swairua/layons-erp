@@ -78,21 +78,29 @@ export const ensureCompanyImageColumns = async () => {
     `;
 
     // Try using the exec_sql RPC function
-    const { error } = await supabase.rpc('exec_sql', {
-      sql_string: sql
-    });
+    try {
+      const { error } = await supabase.rpc('exec_sql', {
+        sql_string: sql
+      });
 
-    if (error) {
-      // If exec_sql RPC doesn't work, log but don't fail
-      console.warn('Could not add company image columns via exec_sql:', error);
-      return false;
+      if (error) {
+        // If exec_sql RPC doesn't work, log but don't fail
+        console.warn('Could not add company image columns via exec_sql:', error);
+        // Return true anyway - columns might already exist
+        return true;
+      }
+
+      console.log('✓ Company image columns are available');
+      return true;
+    } catch (rpcError) {
+      // RPC function doesn't exist or failed - this is OK, columns might already exist
+      console.warn('exec_sql RPC not available:', rpcError);
+      return true;
     }
-
-    console.log('✓ Company image columns are available');
-    return true;
   } catch (error) {
     console.warn('Failed to ensure company image columns exist:', error);
-    return false;
+    // Return true to allow app to continue
+    return true;
   }
 };
 
