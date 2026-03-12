@@ -189,9 +189,10 @@ export default function BOQs() {
       }
 
       // Reconstruct the document using the same approach as EditBOQModal
-      // Use top-level terms_and_conditions as source of truth (matching EditBOQModal behavior at line 122)
+      // Use nested data as primary source of truth for terms_and_conditions (ensures complete data is used)
+      // The nested data is stored directly in the EditBOQModal and is the most authoritative source
       const boqData = boqToUse.data ? { ...boqToUse.data } : {};
-      const termsToUse = boqToUse.terms_and_conditions || boqData.terms_and_conditions || '';
+      const termsToUse = boqData.terms_and_conditions || boqToUse.terms_and_conditions || '';
       // Use top-level show_calculated_values_in_terms as source of truth (snake_case per migration 20250314), fallback to nested value
       const showCalculatedValues = boqToUse.show_calculated_values_in_terms !== undefined
         ? boqToUse.show_calculated_values_in_terms

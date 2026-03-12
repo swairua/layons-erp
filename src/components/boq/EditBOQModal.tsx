@@ -118,8 +118,9 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
       setProjectTitle(boqData.project_title || '');
       setContractor(boqData.contractor || '');
       setNotes(boqData.notes || '');
-      // Use top-level terms_and_conditions as source of truth; fallback to nested only as safety
-      const termsToUse = boq.terms_and_conditions || boqData.terms_and_conditions || '';
+      // Use nested terms_and_conditions as primary source (most complete and authoritative)
+      // The nested data is the source of truth stored in EditBOQModal; fallback to top-level only if nested is missing
+      const termsToUse = boqData.terms_and_conditions || boq.terms_and_conditions || '';
       setTermsAndConditions(termsToUse);
       // Load show_calculated_values_in_terms from top-level column if available, otherwise from nested data
       // Use snake_case column name to match database schema (migration 20250314)
