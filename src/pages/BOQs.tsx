@@ -163,27 +163,42 @@ export default function BOQs() {
         toast.error('BOQ data is not available');
         return;
       }
+
+      // Fetch the latest BOQ data from database to ensure we have the current terms_and_conditions
+      const { data: latestBoq, error: fetchError } = await supabase
+        .from('boqs')
+        .select('*')
+        .eq('id', boq.id)
+        .single();
+
+      if (fetchError || !latestBoq) {
+        console.warn('Could not fetch latest BOQ data, using in-memory version', fetchError);
+      }
+
+      // Use the latest data if available, otherwise fall back to the in-memory version
+      const boqToUse = latestBoq || boq;
+
       // Reconstruct the document using the same approach as EditBOQModal
       // Use top-level terms_and_conditions as source of truth (matching EditBOQModal behavior at line 122)
-      const boqData = boq.data ? { ...boq.data } : {};
-      const termsToUse = boq.terms_and_conditions || boqData.terms_and_conditions || '';
+      const boqData = boqToUse.data ? { ...boqToUse.data } : {};
+      const termsToUse = boqToUse.terms_and_conditions || boqData.terms_and_conditions || '';
       const boqDataForPdf = {
         ...boqData,
-        number: boq.number,
-        date: boq.boq_date,
-        currency: boq.currency || 'KES',
+        number: boqToUse.number,
+        date: boqToUse.boq_date,
+        currency: boqToUse.currency || 'KES',
         client: {
-          name: boq.client_name,
-          email: boq.client_email || undefined,
-          phone: boq.client_phone || undefined,
-          address: boq.client_address || undefined,
-          city: boq.client_city || undefined,
-          country: boq.client_country || undefined,
+          name: boqToUse.client_name,
+          email: boqToUse.client_email || undefined,
+          phone: boqToUse.client_phone || undefined,
+          address: boqToUse.client_address || undefined,
+          city: boqToUse.client_city || undefined,
+          country: boqToUse.client_country || undefined,
         },
         terms_and_conditions: termsToUse,
-        contractor: boq.data?.contractor,
-        project_title: boq.project_title || boq.data?.project_title,
-        notes: boq.data?.notes,
+        contractor: boqToUse.data?.contractor,
+        project_title: boqToUse.project_title || boqToUse.data?.project_title,
+        notes: boqToUse.data?.notes,
       };
       await downloadBOQPDF(boqDataForPdf, currentCompany ? {
         name: currentCompany.name,
@@ -708,58 +723,113 @@ export default function BOQs() {
         const currencyLocale = getLocaleForCurrency(viewing.currency || 'KES');
         const formatViewingCurrency = (amount: number) => new Intl.NumberFormat(currencyLocale.locale, { style: 'currency', currency: currencyLocale.code, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-lg max-w-3xl w-full p-6">
-            <div className="flex items-start justify-between">
-              <h2 className="text-xl font-semibold">BOQ {viewing.number}</h2>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" onClick={() => { setViewing(null); }}>Close</Button>
-                <Button onClick={() => handleDownloadPDF(viewing)}>
-                  <Download className="h-4 w-4 mr-2" /> Download PDF
-                </Button>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] flex flex-col p-4 sm:p-6">
+              {/* Header - Responsive */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-4 border-b">
+                <h2 className="text-lg sm:text-xl font-semibold">BOQ {viewing.number}</h2>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full sm:w-auto">
+                  <Button variant="ghost" onClick={() => { setViewing(null); }} className="w-full sm:w-auto">Close</Button>
+                  <Button onClick={() => handleDownloadPDF(viewing)} className="w-full sm:w-auto">
+                    <Download className="h-4 w-4 mr-2" /> Download PDF
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="mt-4 space-y-2 text-sm">
-              <div><strong>Date:</strong> {new Date(viewing.boq_date).toLocaleDateString()}</div>
-              <div><strong>Currency:</strong> <Badge variant="outline">{viewing.currency || 'KES'}</Badge></div>
-              <div><strong>Client:</strong> {viewing.client_name} {viewing.client_email ? `(${viewing.client_email})` : ''}</div>
-              <div><strong>Project:</strong> {viewing.project_title || '-'}</div>
-              <div><strong>Contractor:</strong> {viewing.contractor || '-'}</div>
-              <div className="pt-2"><strong>Notes:</strong><div className="whitespace-pre-wrap">{viewing.data?.notes || '-'}</div></div>
+              {/* Content - Scrollable */}
+              <div className="overflow-y-auto flex-1">
+                <div className="space-y-3 text-sm pb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><strong>Date:</strong> {new Date(viewing.boq_date).toLocaleDateString()}</div>
+                    <div><strong>Currency:</strong> <Badge variant="outline">{viewing.currency || 'KES'}</Badge></div>
+                    <div className="sm:col-span-2"><strong>Client:</strong> {viewing.client_name} {viewing.client_email ? `(${viewing.client_email})` : ''}</div>
+                    <div><strong>Project:</strong> {viewing.project_title || '-'}</div>
+                    <div><strong>Contractor:</strong> {viewing.contractor || '-'}</div>
+                  </div>
+                  <div className="pt-2"><strong>Notes:</strong><div className="whitespace-pre-wrap text-xs">{viewing.data?.notes || '-'}</div></div>
 
-              <div className="pt-4 space-y-2">
-                {viewing.data?.sections?.map((sec: any, idx: number) => (
-                  <div key={idx}>
-                    <div className="bg-muted/40 border-l-4 border-primary px-4 py-2 mb-1 rounded-r">
-                      <h3 className="font-bold text-sm uppercase tracking-wide text-foreground">{sec.title}</h3>
-                    </div>
+                  <div className="pt-4 space-y-4">
+                    {viewing.data?.sections?.map((sec: any, idx: number) => (
+                      <div key={idx}>
+                        <div className="bg-muted/40 border-l-4 border-primary px-3 sm:px-4 py-2 mb-2 rounded-r">
+                          <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wide text-foreground">{sec.title}</h3>
+                        </div>
 
-                    {sec.subsections && sec.subsections.length > 0 ? (
-                      <div className="space-y-3 ml-2">
-                        {sec.subsections.map((sub: any, subIdx: number) => {
-                          const subsectionTotal = (sub.items || []).reduce((sum: number, it: any) => {
-                            return sum + ((it.quantity || 0) * (it.rate || 0));
-                          }, 0);
+                        {sec.subsections && sec.subsections.length > 0 ? (
+                          <div className="space-y-3 ml-0 sm:ml-2">
+                            {sec.subsections.map((sub: any, subIdx: number) => {
+                              const subsectionTotal = (sub.items || []).reduce((sum: number, it: any) => {
+                                return sum + ((it.quantity || 0) * (it.rate || 0));
+                              }, 0);
 
-                          return (
-                            <div key={subIdx} className="bg-white rounded p-4 border border-border">
-                              <div className="flex justify-between items-center mb-3">
-                                <div className="font-semibold text-sm text-foreground">Subsection {sub.name}: {sub.label}</div>
-                                <div className="text-sm font-bold text-primary">{formatViewingCurrency(subsectionTotal)}</div>
-                              </div>
-                              <table className="w-full text-xs">
+                              return (
+                                <div key={subIdx} className="bg-white rounded p-3 sm:p-4 border border-border">
+                                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+                                    <div className="font-semibold text-xs sm:text-sm text-foreground">Subsection {sub.name}: {sub.label}</div>
+                                    <div className="text-xs sm:text-sm font-bold text-primary">{formatViewingCurrency(subsectionTotal)}</div>
+                                  </div>
+                                  <div className="overflow-x-auto">
+                                    <table className="w-full text-xs">
+                                      <thead>
+                                        <tr className="text-left text-muted-foreground border-b">
+                                          <th className="pb-2 px-1">Description</th><th className="pb-2 px-1">Qty</th><th className="pb-2 px-1">Unit</th><th className="pb-2 px-1">Rate</th><th className="pb-2 px-1 text-right">Amount</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {(sub.items || []).map((it: any, i: number) => (
+                                          <tr key={i} className="border-b last:border-b-0 hover:bg-white/50">
+                                            <td className="py-1 px-1 truncate">{it.description}</td>
+                                            <td className="py-1 px-1 whitespace-nowrap">{it.quantity}</td>
+                                            <td className="py-1 px-1 whitespace-nowrap">{
+                                              (() => {
+                                                if (it.unit_id && units) {
+                                                  const u = units.find((x: any) => x.id === it.unit_id);
+                                                  if (u) return u.abbreviation || u.name;
+                                                }
+                                                if (it.unit_name) return it.unit_name;
+                                                if (it.unit) return it.unit;
+                                                return '-';
+                                              })()
+                                            }</td>
+                                            <td className="py-1 px-1 whitespace-nowrap text-right">{formatViewingCurrency(Number(it.rate || 0))}</td>
+                                            <td className="py-1 px-1 text-right font-medium whitespace-nowrap">{formatViewingCurrency(Number((it.quantity || 0) * (it.rate || 0)))}</td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              );
+                            })}
+
+                            {(() => {
+                              const sectionTotal = (sec.subsections || []).reduce((sum: number, sub: any) => {
+                                return sum + (sub.items || []).reduce((subSum: number, it: any) => {
+                                  return subSum + ((it.quantity || 0) * (it.rate || 0));
+                                }, 0);
+                              }, 0);
+                              return (
+                                <div className="flex justify-end font-bold text-xs sm:text-sm pt-4 mt-2 border-t-2 border-primary">
+                                  <div className="text-primary">Section Total: {formatViewingCurrency(sectionTotal)}</div>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="mt-3 bg-white rounded border border-border p-3 sm:p-4">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-xs sm:text-sm">
                                 <thead>
                                   <tr className="text-left text-muted-foreground border-b">
-                                    <th className="pb-2">Description</th><th className="pb-2">Qty</th><th className="pb-2">Unit</th><th className="pb-2">Rate</th><th className="pb-2 text-right">Amount</th>
+                                    <th className="pb-2 px-1">Description</th><th className="pb-2 px-1">Qty</th><th className="pb-2 px-1">Unit</th><th className="pb-2 px-1">Rate</th><th className="pb-2 px-1 text-right">Amount</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {(sub.items || []).map((it: any, i: number) => (
-                                    <tr key={i} className="border-b last:border-b-0 hover:bg-white/50">
-                                      <td className="py-1">{it.description}</td>
-                                      <td className="py-1">{it.quantity}</td>
-                                      <td className="py-1">{
+                                  {(sec.items || []).map((it: any, i: number) => (
+                                    <tr key={i} className="border-b last:border-b-0 hover:bg-muted/20">
+                                      <td className="py-2 px-1 truncate">{it.description}</td>
+                                      <td className="py-2 px-1 whitespace-nowrap">{it.quantity}</td>
+                                      <td className="py-2 px-1 whitespace-nowrap">{
                                         (() => {
                                           if (it.unit_id && units) {
                                             const u = units.find((x: any) => x.id === it.unit_id);
@@ -770,68 +840,23 @@ export default function BOQs() {
                                           return '-';
                                         })()
                                       }</td>
-                                      <td className="py-1">{formatViewingCurrency(Number(it.rate || 0))}</td>
-                                      <td className="py-1 text-right font-medium">{formatViewingCurrency(Number((it.quantity || 0) * (it.rate || 0)))}</td>
+                                      <td className="py-2 px-1 whitespace-nowrap text-right">{formatViewingCurrency(Number(it.rate || 0))}</td>
+                                      <td className="py-2 px-1 text-right font-medium whitespace-nowrap">{formatViewingCurrency(Number((it.quantity || 0) * (it.rate || 0)))}</td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
                             </div>
-                          );
-                        })}
-
-                        {(() => {
-                          const sectionTotal = (sec.subsections || []).reduce((sum: number, sub: any) => {
-                            return sum + (sub.items || []).reduce((subSum: number, it: any) => {
-                              return subSum + ((it.quantity || 0) * (it.rate || 0));
-                            }, 0);
-                          }, 0);
-                          return (
-                            <div className="flex justify-end font-bold text-sm pt-4 mt-2 border-t-2 border-primary">
-                              <div className="text-primary">Section Total: {formatViewingCurrency(sectionTotal)}</div>
-                            </div>
-                          );
-                        })()}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="mt-4 bg-white rounded border border-border p-4">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-left text-muted-foreground border-b">
-                              <th className="pb-2">Description</th><th className="pb-2">Qty</th><th className="pb-2">Unit</th><th className="pb-2">Rate</th><th className="pb-2 text-right">Amount</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(sec.items || []).map((it: any, i: number) => (
-                              <tr key={i} className="border-b last:border-b-0 hover:bg-muted/20">
-                                <td className="py-2">{it.description}</td>
-                                <td className="py-2">{it.quantity}</td>
-                                <td className="py-2">{
-                                  (() => {
-                                    if (it.unit_id && units) {
-                                      const u = units.find((x: any) => x.id === it.unit_id);
-                                      if (u) return u.abbreviation || u.name;
-                                    }
-                                    if (it.unit_name) return it.unit_name;
-                                    if (it.unit) return it.unit;
-                                    return '-';
-                                  })()
-                                }</td>
-                                <td className="py-2">{formatViewingCurrency(Number(it.rate || 0))}</td>
-                                <td className="py-2 text-right font-medium">{formatViewingCurrency(Number((it.quantity || 0) * (it.rate || 0)))}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      );
+        );
       })()}
 
       {editing && (
