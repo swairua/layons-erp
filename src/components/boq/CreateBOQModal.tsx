@@ -34,6 +34,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { saveBoqDraft, loadBoqDraft, deleteDraft } from '@/services/boqAutoSaveService';
 
+// Safe UUID generator that works in all environments
+const generateSafeUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`;
+};
+
 interface CreateBOQModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,7 +72,7 @@ interface BOQSectionRow {
 }
 
 const defaultItem = (): BOQItemRow => ({
-  id: `item-${crypto.randomUUID()}`,
+  id: `item-${generateSafeUUID()}`,
   description: '',
   quantity: '',
   unit: '',
@@ -71,14 +80,14 @@ const defaultItem = (): BOQItemRow => ({
 });
 
 const defaultSubsection = (name: string, label: string): BOQSubsectionRow => ({
-  id: `subsection-${crypto.randomUUID()}`,
+  id: `subsection-${generateSafeUUID()}`,
   name,
   label,
   items: [defaultItem()],
 });
 
 const defaultSection = (): BOQSectionRow => ({
-  id: `section-${crypto.randomUUID()}`,
+  id: `section-${generateSafeUUID()}`,
   title: 'General',
   subsections: [
     defaultSubsection('A', 'Materials'),
