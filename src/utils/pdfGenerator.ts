@@ -1211,7 +1211,7 @@ export const generatePDF = async (data: DocumentData) => {
     </head>
     <body${data.customTitle === 'INVOICE' ? ' class="special-invoice"' : ''}>
       <!-- Page 1: BOQ Details -->
-      <div class="boq-main">
+      <div class="boq-main page">
         <div class="container">
           ${generatePDFHeader(headerImage, company, companyServices, { ...data, project_title: boqProject }, formatDateLong, documentTitle)}
 
@@ -1244,7 +1244,7 @@ export const generatePDF = async (data: DocumentData) => {
       </div>
 
       <!-- Page 2: Terms and Conditions -->
-      <div class="terms-page">
+      <div class="terms-page page">
         <!-- Terms Section (only shown if terms are provided) -->
         ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
         <div style="margin-bottom: 8px;">
