@@ -1617,26 +1617,10 @@ export const generatePDF = async (data: DocumentData) => {
       const termsElement = boqWrapper.querySelector('.terms-page') as HTMLElement;
       if (termsElement) {
         console.log('Rendering terms and conditions...');
+        console.log('Terms element scroll height:', termsElement.scrollHeight, 'offset height:', termsElement.offsetHeight);
 
-        // Clone the terms element to a temporary wrapper for accurate height measurement
-        const termsMeasureWrapper = document.createElement('div');
-        termsMeasureWrapper.style.position = 'absolute';
-        termsMeasureWrapper.style.left = '0';
-        termsMeasureWrapper.style.top = '0';
-        termsMeasureWrapper.style.width = '180mm';
-        termsMeasureWrapper.style.visibility = 'hidden';
-        termsMeasureWrapper.style.pointerEvents = 'none';
-        termsMeasureWrapper.innerHTML = termsElement.outerHTML;
-        document.body.appendChild(termsMeasureWrapper);
-
-        // Wait for layout to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Get the actual scroll height of the full content
-        const actualTermsHeight = termsMeasureWrapper.scrollHeight || termsMeasureWrapper.offsetHeight || 1000;
-        document.body.removeChild(termsMeasureWrapper);
-
-        // Render the terms element to canvas with full height to capture all content
+        // Render the terms element to canvas with a very large height to capture all content
+        // html2canvas will only render what's actually there, so this ensures nothing is cut off
         const termsCanvas = await html2canvas(termsElement, {
           scale: 2,
           backgroundColor: '#ffffff',
@@ -1645,11 +1629,13 @@ export const generatePDF = async (data: DocumentData) => {
           useCORS: true,
           imageTimeout: 15000,
           timeout: 45000,
-          windowHeight: actualTermsHeight + 50, // Add buffer to ensure all content is captured
-          windowWidth: contentWidth * 3.779527559, // 180mm to pixels
+          windowHeight: 5000, // Use very large height to ensure all content is captured
+          windowWidth: contentWidth * 3.779527559, // Match the container width (180mm)
           proxy: undefined,
           foreignObjectRendering: false
         });
+
+        console.log('Terms canvas dimensions:', termsCanvas.width, 'x', termsCanvas.height);
 
         // Convert canvas to image data
         const imgTermsData = termsCanvas.toDataURL('image/png');
