@@ -30,6 +30,15 @@ import { downloadBOQPDF, BoqDocument } from '@/utils/boqPdfGenerator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+// Safe UUID generator that works in all environments
+const generateSafeUUID = (): string => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback for environments without crypto.randomUUID
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}-${Math.random().toString(36).slice(2, 11)}`;
+};
+
 interface EditBOQModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,7 +69,7 @@ interface BOQSectionRow {
 }
 
 const defaultItem = (): BOQItemRow => ({
-  id: `item-${crypto.randomUUID()}`,
+  id: `item-${generateSafeUUID()}`,
   description: '',
   quantity: 1,
   unit: '',
@@ -68,14 +77,14 @@ const defaultItem = (): BOQItemRow => ({
 });
 
 const defaultSubsection = (name: string, label: string): BOQSubsectionRow => ({
-  id: `subsection-${crypto.randomUUID()}`,
+  id: `subsection-${generateSafeUUID()}`,
   name,
   label,
   items: [defaultItem()],
 });
 
 const defaultSection = (): BOQSectionRow => ({
-  id: `section-${crypto.randomUUID()}`,
+  id: `section-${generateSafeUUID()}`,
   title: 'General',
   subsections: [
     defaultSubsection('A', 'Materials'),
@@ -134,14 +143,14 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
 
       if (boqData.sections && boqData.sections.length > 0) {
         const loadedSections: BOQSectionRow[] = boqData.sections.map((section: any) => ({
-          id: `section-${crypto.randomUUID()}`,
+          id: `section-${generateSafeUUID()}`,
           title: section.title || 'General',
           subsections: (section.subsections || []).map((subsection: any) => ({
-            id: `subsection-${crypto.randomUUID()}`,
+            id: `subsection-${generateSafeUUID()}`,
             name: subsection.name,
             label: subsection.label,
             items: (subsection.items || []).map((item: any) => ({
-              id: `item-${crypto.randomUUID()}`,
+              id: `item-${generateSafeUUID()}`,
               description: item.description,
               quantity: item.quantity || 1,
               unit: item.unit_id || '',
