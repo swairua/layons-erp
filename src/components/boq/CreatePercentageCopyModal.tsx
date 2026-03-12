@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,7 @@ export function CreatePercentageCopyModal({
     setNewBoqNumber(newNum);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       if (availableBOQs.length > 0 && !boqNumber) {
         setBoqNumber(availableBOQs[0].number);
