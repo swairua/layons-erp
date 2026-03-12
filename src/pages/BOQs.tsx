@@ -782,11 +782,11 @@ export default function BOQs() {
                   </div>
                   <div className="pt-2"><strong>Notes:</strong><div className="whitespace-pre-wrap text-xs">{viewing.data?.notes || '-'}</div></div>
 
-                  {(viewing.terms_and_conditions || viewing.data?.terms_and_conditions) && (
+                  {viewing.terms_and_conditions && (
                     <div className="pt-3 border-t">
                       <strong>Terms & Conditions:</strong>
                       <div className="whitespace-pre-wrap text-xs mt-2 p-3 bg-muted/30 rounded border border-border/50">
-                        {viewing.terms_and_conditions || viewing.data?.terms_and_conditions}
+                        {viewing.terms_and_conditions}
                       </div>
                     </div>
                   )}
