@@ -188,15 +188,12 @@ export default function BOQs() {
         boqToUse = latestBoq;
       }
 
-      // Reconstruct the document using the same approach as EditBOQModal
-      // Use nested data as primary source of truth for terms_and_conditions (ensures complete data is used)
-      // The nested data is stored directly in the EditBOQModal and is the most authoritative source
+      // Reconstruct the document using top-level columns as single source of truth
       const boqData = boqToUse.data ? { ...boqToUse.data } : {};
-      const termsToUse = boqData.terms_and_conditions || boqToUse.terms_and_conditions || '';
-      // Use top-level show_calculated_values_in_terms as source of truth (snake_case per migration 20250314), fallback to nested value
-      const showCalculatedValues = boqToUse.show_calculated_values_in_terms !== undefined
-        ? boqToUse.show_calculated_values_in_terms
-        : (boqData.showCalculatedValuesInTerms || false);
+
+      // Use ONLY top-level columns for terms (single source of truth)
+      const termsToUse = boqToUse.terms_and_conditions || '';
+      const showCalculatedValues = boqToUse.show_calculated_values_in_terms || false;
 
       // Log term retrieval for diagnostics
       console.log('BOQ Terms Retrieval Diagnostic:', {
@@ -204,11 +201,8 @@ export default function BOQs() {
         fetchWasSuccessful,
         hasTopLevelTerms: !!boqToUse.terms_and_conditions,
         topLevelTermsLength: boqToUse.terms_and_conditions?.length || 0,
-        hasNestedTerms: !!boqData.terms_and_conditions,
-        nestedTermsLength: boqData.terms_and_conditions?.length || 0,
         finalTermsLength: termsToUse.length,
         topLevelShowCalcValues: boqToUse.show_calculated_values_in_terms,
-        nestedShowCalcValues: boqData.showCalculatedValuesInTerms,
         finalShowCalcValues: showCalculatedValues,
       });
 
@@ -788,11 +782,11 @@ export default function BOQs() {
                   </div>
                   <div className="pt-2"><strong>Notes:</strong><div className="whitespace-pre-wrap text-xs">{viewing.data?.notes || '-'}</div></div>
 
-                  {(viewing.terms_and_conditions || viewing.data?.terms_and_conditions) && (
+                  {viewing.terms_and_conditions && (
                     <div className="pt-3 border-t">
                       <strong>Terms & Conditions:</strong>
                       <div className="whitespace-pre-wrap text-xs mt-2 p-3 bg-muted/30 rounded border border-border/50">
-                        {viewing.terms_and_conditions || viewing.data?.terms_and_conditions}
+                        {viewing.terms_and_conditions}
                       </div>
                     </div>
                   )}

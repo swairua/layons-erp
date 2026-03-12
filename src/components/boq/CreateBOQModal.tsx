@@ -440,8 +440,8 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
           }))
         })),
         notes: notes || undefined,
-        terms_and_conditions: termsAndConditions || undefined,
-        showCalculatedValuesInTerms: showCalculatedValuesInTerms,
+        // NOTE: Do NOT save terms to nested data - save only to top-level columns
+        // This ensures single source of truth for terms_and_conditions and show_calculated_values_in_terms
       };
 
       // Store BOQ in database
