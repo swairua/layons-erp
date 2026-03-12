@@ -128,14 +128,19 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess }: CreateBOQModal
     }
   }, [open, defaultNumber, todayISO]);
 
-  // Each BOQ should have its own terms - don't inherit from company defaults or previous BOQs
+  // Load company default terms when modal opens
   useEffect(() => {
-    if (open && !previousTermsLoaded) {
-      // Start with blank terms - user must explicitly set terms for each BOQ
-      setTermsAndConditions('');
+    if (open && currentCompany?.id && !previousTermsLoaded) {
+      // Use company's default terms if available
+      if (currentCompany.default_terms_and_conditions) {
+        setTermsAndConditions(currentCompany.default_terms_and_conditions);
+      } else {
+        // Otherwise start with blank terms
+        setTermsAndConditions('');
+      }
       setPreviousTermsLoaded(true);
     }
-  }, [open, previousTermsLoaded]);
+  }, [open, currentCompany?.id, currentCompany?.default_terms_and_conditions, previousTermsLoaded]);
 
   // Load draft from database when modal opens (after previous terms are loaded)
   useEffect(() => {
