@@ -165,27 +165,52 @@ export default function BOQs() {
       }
 
       // Fetch the latest BOQ data from database to ensure we have the current terms_and_conditions
+      let boqToUse = boq;
+      let fetchWasSuccessful = true;
+
       const { data: latestBoq, error: fetchError } = await supabase
         .from('boqs')
         .select('*')
         .eq('id', boq.id)
         .single();
 
-      if (fetchError || !latestBoq) {
-        console.warn('Could not fetch latest BOQ data, using in-memory version', fetchError);
+      if (fetchError) {
+        console.error('Failed to fetch latest BOQ data:', fetchError);
+        // Show warning to user that we're using potentially stale data
+        toast.warning('Could not fetch latest BOQ data - using cached version. Terms may not be current.');
+        fetchWasSuccessful = false;
+      } else if (!latestBoq) {
+        console.warn('Latest BOQ data not found in database');
+        toast.warning('Could not find BOQ in database - using cached version.');
+        fetchWasSuccessful = false;
+      } else {
+        // Use the latest data from database
+        boqToUse = latestBoq;
       }
-
-      // Use the latest data if available, otherwise fall back to the in-memory version
-      const boqToUse = latestBoq || boq;
 
       // Reconstruct the document using the same approach as EditBOQModal
       // Use top-level terms_and_conditions as source of truth (matching EditBOQModal behavior at line 122)
       const boqData = boqToUse.data ? { ...boqToUse.data } : {};
       const termsToUse = boqToUse.terms_and_conditions || boqData.terms_and_conditions || '';
-      // Use top-level show_calculated_values_in_terms as source of truth, fallback to nested value
+      // Use top-level show_calculated_values_in_terms as source of truth (snake_case per migration 20250314), fallback to nested value
       const showCalculatedValues = boqToUse.show_calculated_values_in_terms !== undefined
         ? boqToUse.show_calculated_values_in_terms
         : (boqData.showCalculatedValuesInTerms || false);
+
+      // Log term retrieval for diagnostics
+      console.log('BOQ Terms Retrieval Diagnostic:', {
+        boqNumber: boqToUse.number,
+        fetchWasSuccessful,
+        hasTopLevelTerms: !!boqToUse.terms_and_conditions,
+        topLevelTermsLength: boqToUse.terms_and_conditions?.length || 0,
+        hasNestedTerms: !!boqData.terms_and_conditions,
+        nestedTermsLength: boqData.terms_and_conditions?.length || 0,
+        finalTermsLength: termsToUse.length,
+        topLevelShowCalcValues: boqToUse.show_calculated_values_in_terms,
+        nestedShowCalcValues: boqData.showCalculatedValuesInTerms,
+        finalShowCalcValues: showCalculatedValues,
+      });
+
       const boqDataForPdf = {
         ...boqData,
         number: boqToUse.number,
