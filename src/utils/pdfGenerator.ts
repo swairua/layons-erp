@@ -1618,6 +1618,24 @@ export const generatePDF = async (data: DocumentData) => {
       if (termsElement) {
         console.log('Rendering terms and conditions...');
 
+        // Clone the terms element to a temporary wrapper for accurate height measurement
+        const termsMeasureWrapper = document.createElement('div');
+        termsMeasureWrapper.style.position = 'absolute';
+        termsMeasureWrapper.style.left = '0';
+        termsMeasureWrapper.style.top = '0';
+        termsMeasureWrapper.style.width = '180mm';
+        termsMeasureWrapper.style.visibility = 'hidden';
+        termsMeasureWrapper.style.pointerEvents = 'none';
+        termsMeasureWrapper.innerHTML = termsElement.outerHTML;
+        document.body.appendChild(termsMeasureWrapper);
+
+        // Wait for layout to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Get the actual scroll height of the full content
+        const actualTermsHeight = termsMeasureWrapper.scrollHeight || termsMeasureWrapper.offsetHeight || 1000;
+        document.body.removeChild(termsMeasureWrapper);
+
         // Render the terms element to canvas with full height to capture all content
         const termsCanvas = await html2canvas(termsElement, {
           scale: 2,
@@ -1627,16 +1645,10 @@ export const generatePDF = async (data: DocumentData) => {
           useCORS: true,
           imageTimeout: 15000,
           timeout: 45000,
-          windowHeight: Math.max(termsElement.scrollHeight, termsElement.offsetHeight) || 1000,
+          windowHeight: actualTermsHeight + 50, // Add buffer to ensure all content is captured
           windowWidth: contentWidth * 3.779527559, // 180mm to pixels
           proxy: undefined,
-          foreignObjectRendering: false,
-          onclone: (clonedDocument) => {
-            // Ensure CSS page breaks are respected during rendering
-            const style = clonedDocument.createElement('style');
-            style.textContent = '@media print { * { page-break-inside: avoid !important; } }';
-            clonedDocument.head.appendChild(style);
-          }
+          foreignObjectRendering: false
         });
 
         // Convert canvas to image data
@@ -1714,9 +1726,6 @@ export const generatePDF = async (data: DocumentData) => {
       // Clean up
       if (boqWrapper && boqWrapper.parentNode) {
         boqWrapper.parentNode.removeChild(boqWrapper);
-      }
-      if (termsWrapper && termsWrapper.parentNode) {
-        termsWrapper.parentNode.removeChild(termsWrapper);
       }
     }
   }
