@@ -230,6 +230,15 @@ export default function BOQs() {
         project_title: boqToUse.project_title || boqToUse.data?.project_title,
         notes: boqToUse.data?.notes,
       };
+
+      // Diagnostic logging for PDF data structure
+      console.log('📥 BOQ PDF Download - Data Structure:', {
+        boqNumber: boqDataForPdf.number,
+        hasSections: !!boqDataForPdf.sections,
+        sectionsCount: boqDataForPdf.sections?.length || 0,
+        hasTerms: !!boqDataForPdf.terms_and_conditions,
+        termsLength: boqDataForPdf.terms_and_conditions?.length || 0,
+      });
       await downloadBOQPDF(boqDataForPdf, currentCompany ? {
         name: currentCompany.name,
         address: currentCompany.address || undefined,
