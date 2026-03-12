@@ -163,11 +163,12 @@ export default function BOQs() {
         toast.error('BOQ data is not available');
         return;
       }
-      // Reconstruct the document using top-level BOQ fields for critical data like terms
-      // For BOQ PDFs, use ONLY the boqs.terms_and_conditions - no company defaults
-      // If the BOQ has no terms, the PDF will show no terms
-      const boqData = {
-        ...boq.data,
+      // Reconstruct the document using the same approach as EditBOQModal
+      // Use top-level terms_and_conditions as source of truth (matching EditBOQModal behavior at line 122)
+      const boqData = boq.data ? { ...boq.data } : {};
+      const termsToUse = boq.terms_and_conditions || boqData.terms_and_conditions || '';
+      const boqDataForPdf = {
+        ...boqData,
         number: boq.number,
         date: boq.boq_date,
         currency: boq.currency || 'KES',
@@ -179,12 +180,12 @@ export default function BOQs() {
           city: boq.client_city || undefined,
           country: boq.client_country || undefined,
         },
-        terms_and_conditions: boq.terms_and_conditions || boq.data?.terms_and_conditions || null,
+        terms_and_conditions: termsToUse,
         contractor: boq.data?.contractor,
         project_title: boq.project_title || boq.data?.project_title,
         notes: boq.data?.notes,
       };
-      await downloadBOQPDF(boqData, currentCompany ? {
+      await downloadBOQPDF(boqDataForPdf, currentCompany ? {
         name: currentCompany.name,
         address: currentCompany.address || undefined,
         city: currentCompany.city || undefined,
