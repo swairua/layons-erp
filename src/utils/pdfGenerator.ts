@@ -505,6 +505,8 @@ interface CompanyDetails {
   header_image?: string;
   stamp_image?: string;
   default_terms_and_conditions?: string;
+  contractor_signature?: string;
+  contractor_phone?: string;
 }
 
 // Default company details (fallback) - logo will be determined dynamically
@@ -516,6 +518,8 @@ const DEFAULT_COMPANY: CompanyDetails = {
   phone: '',
   email: 'layonscoltd@gmail.com',
   tax_number: '',
+  contractor_signature: 'KELVIN MURIITHI',
+  contractor_phone: '254720717463',
   logo_url: 'https://cdn.builder.io/api/v1/image/assets%2Fb048b36350454e4dba55aefd37788f9c%2Fbd04dab542504461a2451b061741034c?format=webp&width=800',
   header_image: 'https://cdn.builder.io/api/v1/image/assets%2Ff04fab3fe283460ba50093ba53a92dcd%2F1ce2c870c8304b9cab69f4c60615a6af?format=webp&width=800',
   stamp_image: 'https://cdn.builder.io/api/v1/image/assets%2Fd268027e32e4464daae70b56ad7162a8%2Fab5f0478b4fc4e3f942ccde11c08b62e?format=webp&width=800'
@@ -1266,11 +1270,11 @@ export const generatePDF = async (data: DocumentData) => {
             </tr>
             <tr style="border: none;">
               <td style="border: none; padding: 2px 0;"><strong>Tel No;</strong></td>
-              <td style="border: none; padding: 2px 0;">254720717463</td>
+              <td style="border: none; padding: 2px 0;">${company.contractor_phone || DEFAULT_COMPANY.contractor_phone}</td>
             </tr>
             <tr style="border: none;">
               <td style="border: none; padding: 2px 0;"><strong>Signed;</strong></td>
-              <td style="border: none; padding: 2px 0;">KELVIN MURIITHI</td>
+              <td style="border: none; padding: 2px 0;">${company.contractor_signature || DEFAULT_COMPANY.contractor_signature}</td>
             </tr>
           </table>
         </div>
@@ -2003,11 +2007,11 @@ export const generatePDF = async (data: DocumentData) => {
               </tr>
               <tr style="border: none;">
                 <td style="border: none;"><strong>Tel No;</strong></td>
-                <td style="border: none;">254720717463</td>
+                <td style="border: none;">${company.contractor_phone || DEFAULT_COMPANY.contractor_phone}</td>
               </tr>
               <tr style="border: none;">
                 <td style="border: none;"><strong>Signed;</strong></td>
-                <td style="border: none;">KELVIN MURIITHI</td>
+                <td style="border: none;">${company.contractor_signature || DEFAULT_COMPANY.contractor_signature}</td>
               </tr>
             </table>
           </div>
@@ -3418,11 +3422,11 @@ export const generatePDF = async (data: DocumentData) => {
               </tr>
               <tr style="border: none;">
                 <td style="border: none;"><strong>Tel No;</strong></td>
-                <td style="border: none;">254720717463</td>
+                <td style="border: none;">${company.contractor_phone || DEFAULT_COMPANY.contractor_phone}</td>
               </tr>
               <tr style="border: none;">
                 <td style="border: none;"><strong>Signed;</strong></td>
-                <td style="border: none;">KELVIN MURIITHI</td>
+                <td style="border: none;">${company.contractor_signature || DEFAULT_COMPANY.contractor_signature}</td>
               </tr>
             </table>
           </div>

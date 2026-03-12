@@ -1,5 +1,8 @@
 import { PDF_PAGE_CSS } from './pdfMarginConstants';
 
+import { PDF_PAGE_CSS } from './pdfMarginConstants';
+import { DEFAULT_COMPANY_DETAILS, formatDateForPDF, formatCurrencyForPDF } from './pdfUtilities';
+
 export interface LPOPDFData {
   id: string;
   lpo_number: string;
@@ -55,42 +58,8 @@ export interface CompanyData {
   stamp_image?: string;
 }
 
-const DEFAULT_COMPANY: CompanyData = {
-  name: 'Layons Construction Limited',
-  address: '',
-  city: 'Nairobi',
-  country: 'Kenya',
-  phone: '',
-  email: 'layonscoltd@gmail.com',
-  tax_number: '',
-  logo_url: 'https://cdn.builder.io/api/v1/image/assets%2Fb048b36350454e4dba55aefd37788f9c%2Fbd04dab542504461a2451b061741034c?format=webp&width=800',
-  header_image: 'https://cdn.builder.io/api/v1/image/assets%2Ff04fab3fe283460ba50093ba53a92dcd%2F1ce2c870c8304b9cab69f4c60615a6af?format=webp&width=800',
-  stamp_image: 'https://cdn.builder.io/api/v1/image/assets%2Fd268027e32e4464daae70b56ad7162a8%2Fab5f0478b4fc4e3f942ccde11c08b62e?format=webp&width=800'
-};
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-};
-
-const formatCurrency = (amount: number, currency: string = 'KES') => {
-  const localeMap: { [key: string]: string } = {
-    'KES': 'en-KE',
-    'USD': 'en-US',
-    'EUR': 'en-GB',
-    'GBP': 'en-GB',
-  };
-
-  return new Intl.NumberFormat(localeMap[currency] || 'en-KE', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount);
-};
+// Use shared DEFAULT_COMPANY from pdfUtilities - includes contractor details
+const DEFAULT_COMPANY = DEFAULT_COMPANY_DETAILS as CompanyData;
 
 export const generateLPOPDF = (lpo: LPOPDFData, company?: CompanyData) => {
   const companyData = company || DEFAULT_COMPANY;
@@ -111,10 +80,10 @@ export const generateLPOPDF = (lpo: LPOPDFData, company?: CompanyData) => {
       <td class="center">${item.products?.name || 'N/A'}</td>
       <td>${item.description}</td>
       <td class="center">${item.quantity} ${item.products?.unit_of_measure || 'pcs'}</td>
-      <td class="amount">${formatCurrency(item.unit_price)}</td>
+      <td class="amount">${formatCurrencyForPDF(item.unit_price)}</td>
       <td class="center">${item.tax_rate}%</td>
-      <td class="amount">${formatCurrency(item.tax_amount)}</td>
-      <td class="amount">${formatCurrency(item.line_total)}</td>
+      <td class="amount">${formatCurrencyForPDF(item.tax_amount)}</td>
+      <td class="amount">${formatCurrencyForPDF(item.line_total)}</td>
     </tr>
   `).join('') || '';
 
@@ -387,8 +356,8 @@ export const generateLPOPDF = (lpo: LPOPDFData, company?: CompanyData) => {
             <div class="section-title">LPO Details</div>
             <div class="info-content">
               <div><strong>LPO Number:</strong> ${lpo.lpo_number}</div>
-              <div><strong>LPO Date:</strong> ${formatDate(lpo.lpo_date)}</div>
-              ${lpo.delivery_date ? `<div><strong>Delivery Date:</strong> ${formatDate(lpo.delivery_date)}</div>` : ''}
+              <div><strong>LPO Date:</strong> ${formatDateForPDF(lpo.lpo_date)}</div>
+              ${lpo.delivery_date ? `<div><strong>Delivery Date:</strong> ${formatDateForPDF(lpo.delivery_date)}</div>` : ''}
               <div><strong>Status:</strong> ${lpo.status.toUpperCase()}</div>
             </div>
           </div>
@@ -442,15 +411,15 @@ export const generateLPOPDF = (lpo: LPOPDFData, company?: CompanyData) => {
             <div class="totals">
               <div class="total-row">
                 <span>Subtotal:</span>
-                <span>${formatCurrency(lpo.subtotal)}</span>
+                <span>${formatCurrencyForPDF(lpo.subtotal)}</span>
               </div>
               <div class="total-row">
                 <span>Tax Amount:</span>
-                <span>${formatCurrency(lpo.tax_amount)}</span>
+                <span>${formatCurrencyForPDF(lpo.tax_amount)}</span>
               </div>
               <div class="total-row final">
                 <span>Total Amount:</span>
-                <span>${formatCurrency(lpo.total_amount)}</span>
+                <span>${formatCurrencyForPDF(lpo.total_amount)}</span>
               </div>
             </div>
           </div>
