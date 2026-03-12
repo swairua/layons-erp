@@ -1244,9 +1244,13 @@ export const generatePDF = async (data: DocumentData) => {
         <!-- Terms Section -->
         <div style="margin-bottom: 8px;">
           <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 4px; margin-top: 0; text-transform: uppercase;">Terms;</h3>
-          ${(data.terms_and_conditions || company.default_terms_and_conditions) ? `
+          ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
             <div style="font-size: 11px; line-height: 1.4; margin: 0; padding: 0; color: #000;">
-              ${parseAndRenderTerms(data.terms_and_conditions || company.default_terms_and_conditions, grandTotalForBOQ, data.showCalculatedValuesInTerms !== false, formatCurrency)}
+              ${parseAndRenderTerms(data.terms_and_conditions, grandTotalForBOQ, data.showCalculatedValuesInTerms !== false, formatCurrency)}
+            </div>
+          ` : (company.default_terms_and_conditions && company.default_terms_and_conditions.trim()) ? `
+            <div style="font-size: 11px; line-height: 1.4; margin: 0; padding: 0; color: #000;">
+              ${parseAndRenderTerms(company.default_terms_and_conditions, grandTotalForBOQ, data.showCalculatedValuesInTerms !== false, formatCurrency)}
             </div>
           ` : `
             <div style="font-size: 11px; line-height: 1.4; margin: 0; padding: 0; color: #000;">
@@ -1952,9 +1956,13 @@ export const generatePDF = async (data: DocumentData) => {
           <!-- Terms Section -->
           <div style="margin-bottom: 15px;">
             <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Terms;</h3>
-            ${(data.terms_and_conditions || company.default_terms_and_conditions) ? `
+            ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
               <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
-                ${parseAndRenderTerms(data.terms_and_conditions || company.default_terms_and_conditions, data.total_amount, false, formatCurrency)}
+                ${parseAndRenderTerms(data.terms_and_conditions, data.total_amount, false, formatCurrency)}
+              </div>
+            ` : (company.default_terms_and_conditions && company.default_terms_and_conditions.trim()) ? `
+              <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
+                ${parseAndRenderTerms(company.default_terms_and_conditions, data.total_amount, false, formatCurrency)}
               </div>
             ` : `
               <p style="font-size: 11px; margin: 0; color: #666;">No terms and conditions specified.</p>
@@ -3363,9 +3371,13 @@ export const generatePDF = async (data: DocumentData) => {
           <!-- Terms Section -->
           <div style="margin-bottom: 15px;">
             <h3 style="font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Terms;</h3>
-            ${(data.terms_and_conditions || company.default_terms_and_conditions) ? `
+            ${(data.terms_and_conditions && data.terms_and_conditions.trim()) ? `
               <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
-                ${parseAndRenderTerms(data.terms_and_conditions || company.default_terms_and_conditions, data.total_amount || 0, false, formatCurrency)}
+                ${parseAndRenderTerms(data.terms_and_conditions, data.total_amount || 0, false, formatCurrency)}
+              </div>
+            ` : (company.default_terms_and_conditions && company.default_terms_and_conditions.trim()) ? `
+              <div style="font-size: 11px; line-height: 1.6; margin: 0; padding: 0; color: #000;">
+                ${parseAndRenderTerms(company.default_terms_and_conditions, data.total_amount || 0, false, formatCurrency)}
               </div>
             ` : `
               <p style="font-size: 11px; margin: 0; color: #666;">No terms and conditions specified.</p>
