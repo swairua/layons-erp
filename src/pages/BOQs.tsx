@@ -163,12 +163,26 @@ export default function BOQs() {
         toast.error('BOQ data is not available');
         return;
       }
-      // Merge top-level terms_and_conditions into data to ensure saved terms are used
-      const boqDataWithTerms = {
+      // Reconstruct the document using top-level BOQ fields for critical data like terms
+      const boqData = {
         ...boq.data,
-        terms_and_conditions: boq.terms_and_conditions || boq.data?.terms_and_conditions
+        number: boq.number,
+        date: boq.boq_date,
+        currency: boq.currency || 'KES',
+        client: {
+          name: boq.client_name,
+          email: boq.client_email || undefined,
+          phone: boq.client_phone || undefined,
+          address: boq.client_address || undefined,
+          city: boq.client_city || undefined,
+          country: boq.client_country || undefined,
+        },
+        terms_and_conditions: boq.terms_and_conditions !== null && boq.terms_and_conditions !== undefined ? boq.terms_and_conditions : boq.data?.terms_and_conditions,
+        contractor: boq.data?.contractor,
+        project_title: boq.project_title || boq.data?.project_title,
+        notes: boq.data?.notes,
       };
-      await downloadBOQPDF(boqDataWithTerms, currentCompany ? {
+      await downloadBOQPDF(boqData, currentCompany ? {
         name: currentCompany.name,
         address: currentCompany.address || undefined,
         city: currentCompany.city || undefined,
