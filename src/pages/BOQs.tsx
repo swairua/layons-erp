@@ -163,27 +163,42 @@ export default function BOQs() {
         toast.error('BOQ data is not available');
         return;
       }
+
+      // Fetch the latest BOQ data from database to ensure we have the current terms_and_conditions
+      const { data: latestBoq, error: fetchError } = await supabase
+        .from('boqs')
+        .select('*')
+        .eq('id', boq.id)
+        .single();
+
+      if (fetchError || !latestBoq) {
+        console.warn('Could not fetch latest BOQ data, using in-memory version', fetchError);
+      }
+
+      // Use the latest data if available, otherwise fall back to the in-memory version
+      const boqToUse = latestBoq || boq;
+
       // Reconstruct the document using the same approach as EditBOQModal
       // Use top-level terms_and_conditions as source of truth (matching EditBOQModal behavior at line 122)
-      const boqData = boq.data ? { ...boq.data } : {};
-      const termsToUse = boq.terms_and_conditions || boqData.terms_and_conditions || '';
+      const boqData = boqToUse.data ? { ...boqToUse.data } : {};
+      const termsToUse = boqToUse.terms_and_conditions || boqData.terms_and_conditions || '';
       const boqDataForPdf = {
         ...boqData,
-        number: boq.number,
-        date: boq.boq_date,
-        currency: boq.currency || 'KES',
+        number: boqToUse.number,
+        date: boqToUse.boq_date,
+        currency: boqToUse.currency || 'KES',
         client: {
-          name: boq.client_name,
-          email: boq.client_email || undefined,
-          phone: boq.client_phone || undefined,
-          address: boq.client_address || undefined,
-          city: boq.client_city || undefined,
-          country: boq.client_country || undefined,
+          name: boqToUse.client_name,
+          email: boqToUse.client_email || undefined,
+          phone: boqToUse.client_phone || undefined,
+          address: boqToUse.client_address || undefined,
+          city: boqToUse.client_city || undefined,
+          country: boqToUse.client_country || undefined,
         },
         terms_and_conditions: termsToUse,
-        contractor: boq.data?.contractor,
-        project_title: boq.project_title || boq.data?.project_title,
-        notes: boq.data?.notes,
+        contractor: boqToUse.data?.contractor,
+        project_title: boqToUse.project_title || boqToUse.data?.project_title,
+        notes: boqToUse.data?.notes,
       };
       await downloadBOQPDF(boqDataForPdf, currentCompany ? {
         name: currentCompany.name,
