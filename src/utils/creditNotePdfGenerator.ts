@@ -1,5 +1,6 @@
 import type { CreditNote } from '@/hooks/useCreditNotes';
 import { PDF_PAGE_CSS } from './pdfMarginConstants';
+import { DEFAULT_COMPANY_DETAILS, formatDateForPDF, formatCurrencyForPDF } from './pdfUtilities';
 
 export interface CreditNotePDFData extends CreditNote {
   customers: {
@@ -43,19 +44,8 @@ export interface CompanyData {
   stamp_image?: string;
 }
 
-// Default company details (fallback) - logo will be determined dynamically
-const DEFAULT_COMPANY: CompanyData = {
-  name: 'Layons Construction Limited',
-  address: '',
-  city: 'Nairobi',
-  country: 'Kenya',
-  phone: '',
-  email: 'layonscoltd@gmail.com',
-  tax_number: '',
-  logo_url: 'https://cdn.builder.io/api/v1/image/assets%2Fb048b36350454e4dba55aefd37788f9c%2Fbd04dab542504461a2451b061741034c?format=webp&width=800',
-  header_image: 'https://cdn.builder.io/api/v1/image/assets%2Ff04fab3fe283460ba50093ba53a92dcd%2F1ce2c870c8304b9cab69f4c60615a6af?format=webp&width=800',
-  stamp_image: 'https://cdn.builder.io/api/v1/image/assets%2Fd268027e32e4464daae70b56ad7162a8%2Fab5f0478b4fc4e3f942ccde11c08b62e?format=webp&width=800'
-};
+// Use shared DEFAULT_COMPANY from pdfUtilities - includes contractor details
+const DEFAULT_COMPANY = DEFAULT_COMPANY_DETAILS as CompanyData;
 
 export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: CompanyData) => {
   // Use company details from parameter or fall back to defaults
@@ -63,30 +53,6 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
 
   // Get stamp image with fallback
   const stampImage = companyData.stamp_image || DEFAULT_COMPANY.stamp_image;
-
-  const formatCurrency = (amount: number, currency: string = 'KES') => {
-    const localeMap: { [key: string]: string } = {
-      'KES': 'en-KE',
-      'USD': 'en-US',
-      'EUR': 'en-GB',
-      'GBP': 'en-GB',
-    };
-
-    return new Intl.NumberFormat(localeMap[currency] || 'en-KE', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
 
   // Create a new window with the document content
   const printWindow = window.open('', '_blank');
@@ -501,7 +467,7 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
                 </tr>
                 <tr>
                   <td class="label">Date:</td>
-                  <td class="value">${formatDate(creditNote.credit_note_date)}</td>
+                  <td class="value">${formatDateForPDF(creditNote.credit_note_date)}</td>
                 </tr>
                 <tr>
                   <td class="label">Status:</td>
@@ -509,7 +475,7 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
                 </tr>
                 <tr>
                   <td class="label">Credit Amount:</td>
-                  <td class="value" style="font-weight: bold; color: #DC3545;">${formatCurrency(creditNote.total_amount)}</td>
+                  <td class="value" style="font-weight: bold; color: #DC3545;">${formatCurrencyForPDF(creditNote.total_amount)}</td>
                 </tr>
               </table>
             </div>
@@ -536,8 +502,8 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
             <div class="related-details">
               ${creditNote.reason ? `<strong>Reason:</strong><br>${creditNote.reason}<br><br>` : ''}
               ${creditNote.invoices?.invoice_number ? `<strong>Related Invoice:</strong><br>${creditNote.invoices.invoice_number}<br><br>` : ''}
-              <strong>Applied Amount:</strong><br>${formatCurrency(creditNote.applied_amount)}<br><br>
-              <strong>Remaining Balance:</strong><br>${formatCurrency(creditNote.balance)}
+              <strong>Applied Amount:</strong><br>${formatCurrencyForPDF(creditNote.applied_amount)}<br><br>
+              <strong>Remaining Balance:</strong><br>${formatCurrencyForPDF(creditNote.balance)}
             </div>
           </div>
         </div>
@@ -563,10 +529,10 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
                   <td class="center">${index + 1}</td>
                   <td class="description-cell">${item.description || item.product_name || item.products?.name || 'Unknown Item'}</td>
                   <td class="center">${item.quantity}</td>
-                  <td class="amount-cell">${formatCurrency(item.unit_price)}</td>
+                  <td class="amount-cell">${formatCurrencyForPDF(item.unit_price)}</td>
                   <td class="center">${item.tax_percentage}%</td>
-                  <td class="amount-cell">${formatCurrency(item.tax_amount)}</td>
-                  <td class="amount-cell">${formatCurrency(item.line_total)}</td>
+                  <td class="amount-cell">${formatCurrencyForPDF(item.tax_amount)}</td>
+                  <td class="amount-cell">${formatCurrencyForPDF(item.line_total)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -579,23 +545,23 @@ export const generateCreditNotePDF = (creditNote: CreditNotePDFData, company?: C
           <table class="totals-table">
             <tr class="subtotal-row">
               <td class="label">Subtotal:</td>
-              <td class="amount">${formatCurrency(creditNote.subtotal)}</td>
+              <td class="amount">${formatCurrencyForPDF(creditNote.subtotal)}</td>
             </tr>
             <tr>
               <td class="label">Tax Amount:</td>
-              <td class="amount">${formatCurrency(creditNote.tax_amount)}</td>
+              <td class="amount">${formatCurrencyForPDF(creditNote.tax_amount)}</td>
             </tr>
             <tr class="total-row">
               <td class="label">TOTAL CREDIT:</td>
-              <td class="amount">${formatCurrency(creditNote.total_amount)}</td>
+              <td class="amount">${formatCurrencyForPDF(creditNote.total_amount)}</td>
             </tr>
             <tr>
               <td class="label">Applied Amount:</td>
-              <td class="amount">${formatCurrency(creditNote.applied_amount)}</td>
+              <td class="amount">${formatCurrencyForPDF(creditNote.applied_amount)}</td>
             </tr>
             <tr class="balance-row">
               <td class="label">REMAINING BALANCE:</td>
-              <td class="amount">${formatCurrency(creditNote.balance)}</td>
+              <td class="amount">${formatCurrencyForPDF(creditNote.balance)}</td>
             </tr>
           </table>
         </div>

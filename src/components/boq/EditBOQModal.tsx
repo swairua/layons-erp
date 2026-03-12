@@ -122,8 +122,8 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
       // Nested data should NOT be used for terms - top-level columns are authoritative
       const termsToUse = boq.terms_and_conditions || '';
       setTermsAndConditions(termsToUse);
-      // Use ONLY top-level show_calculated_values_in_terms (snake_case per migration 20250314)
-      const showCalcValues = boq.show_calculated_values_in_terms || false;
+      // Use ONLY top-level showCalculatedValuesInTerms as source of truth
+      const showCalcValues = boq.showCalculatedValuesInTerms || false;
       setShowCalculatedValuesInTerms(showCalcValues);
       setCurrency(boqData.currency || 'KES');
 
@@ -360,7 +360,7 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess }: EditBOQModa
         total_amount: filledSubtotal,
         data: doc,
         terms_and_conditions: termsAndConditions || null,
-        show_calculated_values_in_terms: showCalculatedValuesInTerms,
+        showCalculatedValuesInTerms: showCalculatedValuesInTerms,
       };
 
       const { error: updateError } = await supabase.from('boqs').update(payload).eq('id', boq.id);
