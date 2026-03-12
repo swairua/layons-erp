@@ -177,7 +177,7 @@ export default function BOQs() {
           city: boq.client_city || undefined,
           country: boq.client_country || undefined,
         },
-        terms_and_conditions: boq.terms_and_conditions !== null && boq.terms_and_conditions !== undefined ? boq.terms_and_conditions : boq.data?.terms_and_conditions,
+        terms_and_conditions: boq.terms_and_conditions,
         contractor: boq.data?.contractor,
         project_title: boq.project_title || boq.data?.project_title,
         notes: boq.data?.notes,
