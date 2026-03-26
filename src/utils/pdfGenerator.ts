@@ -3426,6 +3426,8 @@ export const generatePDF = async (data: DocumentData) => {
             <img src="${receiptStampImage}" alt="Company Stamp" />
           </div>
           <div class="receipt-footer-text">
+            <strong>Thank you for your business!</strong>
+            <strong>${company.name}</strong>
             <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
             <em>This receipt serves as proof of payment received</em>
           </div>
