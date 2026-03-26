@@ -2954,14 +2954,13 @@ export const generatePDF = async (data: DocumentData) => {
         
         
         .footer {
-          position: absolute;
-          bottom: 20mm;
-          left: 20mm;
-          right: 20mm;
+          position: relative;
           text-align: center;
           font-size: 10px;
           color: #000;
-          padding-top: 0;
+          padding-top: 15px;
+          margin-top: 15px;
+          border-top: 1px solid #e9ecef;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -2969,11 +2968,75 @@ export const generatePDF = async (data: DocumentData) => {
           gap: 8px;
         }
 
+        .receipt-footer-top {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          font-size: 9px;
+          margin-bottom: 10px;
+          padding: 8px 0;
+          border-bottom: 1px solid #e9ecef;
+        }
+
+        .receipt-footer-left {
+          text-align: left;
+          flex: 1;
+        }
+
+        .receipt-footer-center {
+          text-align: center;
+          flex: 1;
+        }
+
+        .receipt-footer-right {
+          text-align: right;
+          flex: 1;
+        }
+
+        .receipt-footer-section {
+          margin: 8px 0;
+          line-height: 1.6;
+        }
+
+        .receipt-footer-section strong {
+          font-weight: bold;
+          display: block;
+          font-size: 10px;
+        }
+
+        .receipt-footer-section span {
+          display: block;
+          font-size: 9px;
+        }
+
+        .receipt-footer-details {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          font-size: 9px;
+          margin: 10px 0;
+          padding: 0;
+        }
+
+        .receipt-footer-detail-item {
+          flex: 1;
+        }
+
+        .receipt-footer-detail-label {
+          font-weight: bold;
+          font-size: 9px;
+        }
+
+        .receipt-footer-detail-value {
+          font-size: 9px;
+          margin-top: 1px;
+        }
+
         .receipt-stamp-block {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin: 0 auto 0;
+          margin: 10px auto;
           position: relative;
           z-index: 2;
           pointer-events: none;
@@ -2981,10 +3044,10 @@ export const generatePDF = async (data: DocumentData) => {
         }
 
         .receipt-stamp-block img {
-          width: 50mm;
-          height: 50mm;
-          max-width: 50mm;
-          max-height: 50mm;
+          width: 45mm;
+          height: 45mm;
+          max-width: 45mm;
+          max-height: 45mm;
           object-fit: contain;
           background: transparent;
         }
@@ -2994,6 +3057,19 @@ export const generatePDF = async (data: DocumentData) => {
           flex-direction: column;
           align-items: center;
           gap: 2mm;
+          line-height: 1.4;
+          margin: 8px 0;
+        }
+
+        .receipt-footer-text strong {
+          font-weight: bold;
+          font-size: 10px;
+        }
+
+        .receipt-footer-disclaimer {
+          font-size: 9px;
+          font-style: italic;
+          margin-top: 8px;
           line-height: 1.4;
         }
 
@@ -3407,21 +3483,70 @@ export const generatePDF = async (data: DocumentData) => {
         <!-- Footer (only for non-invoice/quotation types) -->
         ${(data.type !== 'invoice' && data.type !== 'quotation') ? `
         <div class="footer">
+          <!-- Footer Top Section with Company Info -->
+          ${data.type === 'receipt' ? `
+          <div class="receipt-footer-top">
+            <div class="receipt-footer-left">
+              <strong>WORKS</strong>
+              <span>MECHANICAL WORKS</span>
+            </div>
+            <div class="receipt-footer-center">
+              <span>Thank you for your business!</span>
+              <strong>${company.name}</strong>
+            </div>
+            <div class="receipt-footer-right">
+              <span>Telephone: ${company.phone || '+254 XXX XXX XXX'}</span>
+              <span>${company.email || 'info@company.com'}</span>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Client Details Section -->
+          ${data.type === 'receipt' ? `
+          <div class="receipt-footer-details">
+            <div class="receipt-footer-detail-item">
+              <div class="receipt-footer-detail-label">Client</div>
+              <div class="receipt-footer-detail-value">${data.customer?.name || 'N/A'}</div>
+            </div>
+            <div class="receipt-footer-detail-item">
+              <div class="receipt-footer-detail-label">Subject</div>
+              <div class="receipt-footer-detail-value">Payment Receipt</div>
+            </div>
+            <div class="receipt-footer-detail-item">
+              <div class="receipt-footer-detail-label">Date</div>
+              <div class="receipt-footer-detail-value">${new Date(data.date).toLocaleDateString() || new Date().toLocaleDateString()}</div>
+            </div>
+            <div class="receipt-footer-detail-item">
+              <div class="receipt-footer-detail-label">Reference</div>
+              <div class="receipt-footer-detail-value">PAY-${data.number || data.id}</div>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Stamp Section -->
+          ${data.type === 'receipt' ? `
+          <div class="receipt-stamp-block">
+            <img src="${receiptStampImage}" alt="Company Stamp" />
+          </div>
+          ` : ''}
+
+          <!-- Footer Text Section -->
+          ${data.type === 'receipt' ? `
+          <div class="receipt-footer-text">
+            <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
+            <strong style="font-size: 9px; font-style: italic;">This receipt serves as proof of payment received</strong>
+          </div>
+          ` : `
           <div class="receipt-footer-text">
             <strong>Thank you for your business!</strong>
             <strong>${company.name}</strong>
-            ${data.type === 'receipt' ? `
-            <div class="receipt-stamp-block">
-              <img src="${receiptStampImage}" alt="Company Stamp" />
-            </div>
-            ` : ''}
             <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
             ${data.type === 'proforma' ? '<em>This is a proforma invoice and not a request for payment</em>' : ''}
             ${data.type === 'delivery' ? '<em>This delivery note confirms the items delivered</em>' : ''}
-            ${data.type === 'receipt' ? '<em>This receipt serves as proof of payment received</em>' : ''}
             ${data.type === 'remittance' ? '<em>This remittance advice details payments made to your account</em>' : ''}
             ${data.type === 'lpo' ? '<em>This Local Purchase Order serves as an official request for goods/services</em>' : ''}
           </div>
+          `}
         </div>
         ` : ''}
       </div>
