@@ -2969,7 +2969,7 @@ export const generatePDF = async (data: DocumentData) => {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin: 10mm auto 0;
+          margin: 0 auto 1mm;
           position: relative;
           z-index: 2;
           pointer-events: none;
@@ -2983,6 +2983,19 @@ export const generatePDF = async (data: DocumentData) => {
           max-height: 50mm;
           object-fit: contain;
           background: transparent;
+        }
+
+        .receipt-footer-text {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1mm;
+          line-height: 1.2;
+        }
+
+        .receipt-footer-text .generated-line {
+          font-size: 10px;
+          color: #000;
         }
         
         .delivery-info-section {
@@ -3368,12 +3381,6 @@ export const generatePDF = async (data: DocumentData) => {
         </div>
         ` : ''}
 
-        ${data.type === 'receipt' ? `
-        <div class="receipt-stamp-block">
-          <img src="${receiptStampImage}" alt="Company Stamp" />
-        </div>
-        ` : ''}
-
         <!-- Signature Section (for delivery notes) -->
         ${data.type === 'delivery' ? `
         <div class="signature-section">
@@ -3396,14 +3403,21 @@ export const generatePDF = async (data: DocumentData) => {
         <!-- Footer (only for non-invoice/quotation types) -->
         ${(data.type !== 'invoice' && data.type !== 'quotation') ? `
         <div class="footer">
-          <strong>Thank you for your business!</strong><br>
-          <strong>${company.name}</strong><br>
-          This document was generated on ${new Date().toLocaleString()}
-          ${data.type === 'proforma' ? '<br><em>This is a proforma invoice and not a request for payment</em>' : ''}
-          ${data.type === 'delivery' ? '<br><em>This delivery note confirms the items delivered</em>' : ''}
-          ${data.type === 'receipt' ? '<br><em>This receipt serves as proof of payment received</em>' : ''}
-          ${data.type === 'remittance' ? '<br><em>This remittance advice details payments made to your account</em>' : ''}
-          ${data.type === 'lpo' ? '<br><em>This Local Purchase Order serves as an official request for goods/services</em>' : ''}
+          ${data.type === 'receipt' ? `
+          <div class="receipt-stamp-block">
+            <img src="${receiptStampImage}" alt="Company Stamp" />
+          </div>
+          ` : ''}
+          <div class="receipt-footer-text">
+            <strong>Thank you for your business!</strong>
+            <strong>${company.name}</strong>
+            <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
+            ${data.type === 'proforma' ? '<em>This is a proforma invoice and not a request for payment</em>' : ''}
+            ${data.type === 'delivery' ? '<em>This delivery note confirms the items delivered</em>' : ''}
+            ${data.type === 'receipt' ? '<em>This receipt serves as proof of payment received</em>' : ''}
+            ${data.type === 'remittance' ? '<em>This remittance advice details payments made to your account</em>' : ''}
+            ${data.type === 'lpo' ? '<em>This Local Purchase Order serves as an official request for goods/services</em>' : ''}
+          </div>
         </div>
         ` : ''}
       </div>
