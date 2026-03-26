@@ -2969,10 +2969,11 @@ export const generatePDF = async (data: DocumentData) => {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin: -18mm auto 4mm;
+          margin: 10mm auto 0;
           position: relative;
           z-index: 2;
           pointer-events: none;
+          background: transparent;
         }
 
         .receipt-stamp-block img {
@@ -2981,6 +2982,7 @@ export const generatePDF = async (data: DocumentData) => {
           max-width: 50mm;
           max-height: 50mm;
           object-fit: contain;
+          background: transparent;
         }
         
         .delivery-info-section {
