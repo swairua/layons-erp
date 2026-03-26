@@ -2961,15 +2961,19 @@ export const generatePDF = async (data: DocumentData) => {
           text-align: center;
           font-size: 10px;
           color: #000;
-          border-top: 1px solid #e9ecef;
-          padding-top: 15px;
+          padding-top: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
 
         .receipt-stamp-block {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin: 0 auto 1mm;
+          margin: 0 auto 0;
           position: relative;
           z-index: 2;
           pointer-events: none;
@@ -2989,8 +2993,8 @@ export const generatePDF = async (data: DocumentData) => {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 1mm;
-          line-height: 1.2;
+          gap: 2mm;
+          line-height: 1.4;
         }
 
         .receipt-footer-text .generated-line {
@@ -3403,14 +3407,14 @@ export const generatePDF = async (data: DocumentData) => {
         <!-- Footer (only for non-invoice/quotation types) -->
         ${(data.type !== 'invoice' && data.type !== 'quotation') ? `
         <div class="footer">
-          ${data.type === 'receipt' ? `
-          <div class="receipt-stamp-block">
-            <img src="${receiptStampImage}" alt="Company Stamp" />
-          </div>
-          ` : ''}
           <div class="receipt-footer-text">
             <strong>Thank you for your business!</strong>
             <strong>${company.name}</strong>
+            ${data.type === 'receipt' ? `
+            <div class="receipt-stamp-block">
+              <img src="${receiptStampImage}" alt="Company Stamp" />
+            </div>
+            ` : ''}
             <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
             ${data.type === 'proforma' ? '<em>This is a proforma invoice and not a request for payment</em>' : ''}
             ${data.type === 'delivery' ? '<em>This delivery note confirms the items delivered</em>' : ''}
