@@ -792,7 +792,7 @@ export const generatePDF = async (data: DocumentData) => {
   // Get header and stamp images with fallbacks
   const headerImage = company.header_image || DEFAULT_COMPANY.header_image;
   const stampImage = company.stamp_image || DEFAULT_COMPANY.stamp_image;
-  const receiptStampImage = data.stampImageUrl || stampImage;
+  const receiptStampImage = data.stampImageUrl || 'https://cdn.builder.io/api/v1/image/assets%2F7042c492d4864fb6bf96c3fbcd9aa96c%2F6b390240eb774099ad0438c3c0fab88b?format=webp&width=800&height=1200';
 
   console.log('🖼️ Header Image:', headerImage);
   console.log('🔖 Stamp Image:', stampImage);
