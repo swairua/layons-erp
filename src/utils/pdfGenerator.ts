@@ -2954,22 +2954,25 @@ export const generatePDF = async (data: DocumentData) => {
         
         
         .footer {
-          position: absolute;
-          bottom: 20mm;
-          left: 20mm;
-          right: 20mm;
+          position: relative;
           text-align: center;
           font-size: 10px;
           color: #000;
-          border-top: 1px solid #e9ecef;
           padding-top: 15px;
+          margin-top: 15px;
+          border-top: 1px solid #e9ecef;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
         }
 
         .receipt-stamp-block {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin: 0 auto 1mm;
+          margin: 8px auto;
           position: relative;
           z-index: 2;
           pointer-events: none;
@@ -2989,8 +2992,23 @@ export const generatePDF = async (data: DocumentData) => {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 1mm;
-          line-height: 1.2;
+          gap: 2px;
+          line-height: 1.3;
+          margin: 5px 0;
+        }
+
+        .receipt-footer-text strong {
+          font-weight: bold;
+          font-size: 10px;
+        }
+
+        .receipt-footer-text span {
+          font-size: 9px;
+        }
+
+        .receipt-footer-text em {
+          font-size: 9px;
+          font-style: italic;
         }
 
         .receipt-footer-text .generated-line {
@@ -3407,17 +3425,23 @@ export const generatePDF = async (data: DocumentData) => {
           <div class="receipt-stamp-block">
             <img src="${receiptStampImage}" alt="Company Stamp" />
           </div>
-          ` : ''}
+          <div class="receipt-footer-text">
+            <strong>Thank you for your business!</strong>
+            <strong>${company.name}</strong>
+            <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
+            <em>This receipt serves as proof of payment received</em>
+          </div>
+          ` : `
           <div class="receipt-footer-text">
             <strong>Thank you for your business!</strong>
             <strong>${company.name}</strong>
             <span class="generated-line">This document was generated on ${new Date().toLocaleString()}</span>
             ${data.type === 'proforma' ? '<em>This is a proforma invoice and not a request for payment</em>' : ''}
             ${data.type === 'delivery' ? '<em>This delivery note confirms the items delivered</em>' : ''}
-            ${data.type === 'receipt' ? '<em>This receipt serves as proof of payment received</em>' : ''}
             ${data.type === 'remittance' ? '<em>This remittance advice details payments made to your account</em>' : ''}
             ${data.type === 'lpo' ? '<em>This Local Purchase Order serves as an official request for goods/services</em>' : ''}
           </div>
+          `}
         </div>
         ` : ''}
       </div>
