@@ -2965,23 +2965,21 @@ export const generatePDF = async (data: DocumentData) => {
           padding-top: 15px;
         }
 
-        .receipt-footer-stamp {
-          position: absolute;
-          left: 50%;
-          top: -22mm;
-          transform: translateX(-50%);
-          width: 44mm;
-          height: 44mm;
+        .receipt-stamp-block {
           display: flex;
           justify-content: center;
           align-items: center;
+          margin: -18mm auto 4mm;
+          position: relative;
           z-index: 2;
           pointer-events: none;
         }
 
-        .receipt-footer-stamp img {
-          max-width: 44mm;
-          max-height: 44mm;
+        .receipt-stamp-block img {
+          width: 50mm;
+          height: 50mm;
+          max-width: 50mm;
+          max-height: 50mm;
           object-fit: contain;
         }
         
@@ -3368,6 +3366,12 @@ export const generatePDF = async (data: DocumentData) => {
         </div>
         ` : ''}
 
+        ${data.type === 'receipt' ? `
+        <div class="receipt-stamp-block">
+          <img src="${receiptStampImage}" alt="Company Stamp" />
+        </div>
+        ` : ''}
+
         <!-- Signature Section (for delivery notes) -->
         ${data.type === 'delivery' ? `
         <div class="signature-section">
@@ -3391,11 +3395,6 @@ export const generatePDF = async (data: DocumentData) => {
         ${(data.type !== 'invoice' && data.type !== 'quotation') ? `
         <div class="footer">
           <strong>Thank you for your business!</strong><br>
-          ${data.type === 'receipt' ? `
-          <div class="receipt-footer-stamp">
-            <img src="${receiptStampImage}" alt="Company Stamp" />
-          </div>
-          ` : ''}
           <strong>${company.name}</strong><br>
           This document was generated on ${new Date().toLocaleString()}
           ${data.type === 'proforma' ? '<br><em>This is a proforma invoice and not a request for payment</em>' : ''}
