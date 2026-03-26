@@ -792,6 +792,7 @@ export const generatePDF = async (data: DocumentData) => {
   // Get header and stamp images with fallbacks
   const headerImage = company.header_image || DEFAULT_COMPANY.header_image;
   const stampImage = company.stamp_image || DEFAULT_COMPANY.stamp_image;
+  const receiptStampImage = data.stampImageUrl || stampImage;
 
   console.log('🖼️ Header Image:', headerImage);
   console.log('🔖 Stamp Image:', stampImage);
@@ -2963,6 +2964,21 @@ export const generatePDF = async (data: DocumentData) => {
           border-top: 1px solid #e9ecef;
           padding-top: 15px;
         }
+
+        .receipt-footer-stamp {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 0 auto 8px;
+          width: 36mm;
+          height: 36mm;
+        }
+
+        .receipt-footer-stamp img {
+          max-width: 36mm;
+          max-height: 36mm;
+          object-fit: contain;
+        }
         
         .delivery-info-section {
           margin: 6px 0;
@@ -3369,6 +3385,11 @@ export const generatePDF = async (data: DocumentData) => {
         <!-- Footer (only for non-invoice/quotation types) -->
         ${(data.type !== 'invoice' && data.type !== 'quotation') ? `
         <div class="footer">
+          ${data.type === 'receipt' ? `
+          <div class="receipt-footer-stamp">
+            <img src="${receiptStampImage}" alt="Company Stamp" />
+          </div>
+          ` : ''}
           <strong>Thank you for your business!</strong><br>
           <strong>${company.name}</strong><br>
           This document was generated on ${new Date().toLocaleString()}
