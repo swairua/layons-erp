@@ -360,15 +360,23 @@ const App = () => {
               </ProtectedRoute>
             } 
           />
-          <Route 
-            path="/payments/new" 
+          <Route
+            path="/payments/new"
             element={
               <ProtectedRoute>
                 <Payments />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
+          <Route
+            path="/receipts"
+            element={
+              <ProtectedRoute>
+                <Payments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/credit-notes" 
             element={
               <ProtectedRoute>
