@@ -413,6 +413,7 @@ export interface DocumentData {
   currency?: string; // Currency code: 'KES', 'USD', 'EUR'
   customTitle?: string; // Optional custom title for BOQ PDFs
   stampImageUrl?: string; // Optional stamp image URL for special PDFs
+  display_as_percentage?: boolean; // Whether to display calculated values instead of percentages in PDF
   customer: {
     name: string;
     email?: string;
@@ -526,7 +527,7 @@ const DEFAULT_COMPANY: CompanyDetails = {
 };
 
 // Helper function to determine which columns have values
-const analyzeColumns = (items: DocumentData['items']) => {
+const analyzeColumns = (items: DocumentData['items'], displayAsPercentage: boolean = false) => {
   if (!items || items.length === 0) return {};
 
   const columns = {
@@ -538,20 +539,38 @@ const analyzeColumns = (items: DocumentData['items']) => {
   };
 
   items.forEach(item => {
-    if (item.discount_percentage && item.discount_percentage > 0) {
-      columns.discountPercentage = true;
-    }
-    if (item.discount_before_vat && item.discount_before_vat > 0) {
-      columns.discountBeforeVat = true;
-    }
-    if (item.discount_amount && item.discount_amount > 0) {
-      columns.discountAmount = true;
-    }
-    if (item.tax_percentage && item.tax_percentage > 0) {
-      columns.taxPercentage = true;
-    }
-    if (item.tax_amount && item.tax_amount > 0) {
-      columns.taxAmount = true;
+    // When display_as_percentage is true, hide percentage columns and only show amounts
+    if (displayAsPercentage) {
+      // Hide percentage columns
+      columns.discountPercentage = false;
+      columns.taxPercentage = false;
+      // Show amount columns instead
+      if (item.discount_before_vat && item.discount_before_vat > 0) {
+        columns.discountBeforeVat = true;
+      }
+      if (item.discount_amount && item.discount_amount > 0) {
+        columns.discountAmount = true;
+      }
+      if (item.tax_amount && item.tax_amount > 0) {
+        columns.taxAmount = true;
+      }
+    } else {
+      // Original behavior when not display_as_percentage mode
+      if (item.discount_percentage && item.discount_percentage > 0) {
+        columns.discountPercentage = true;
+      }
+      if (item.discount_before_vat && item.discount_before_vat > 0) {
+        columns.discountBeforeVat = true;
+      }
+      if (item.discount_amount && item.discount_amount > 0) {
+        columns.discountAmount = true;
+      }
+      if (item.tax_percentage && item.tax_percentage > 0) {
+        columns.taxPercentage = true;
+      }
+      if (item.tax_amount && item.tax_amount > 0) {
+        columns.taxAmount = true;
+      }
     }
   });
 
@@ -799,7 +818,7 @@ export const generatePDF = async (data: DocumentData) => {
   console.log('📋 Company data:', company);
 
   // Analyze which columns have values
-  const visibleColumns = analyzeColumns(data.items);
+  const visibleColumns = analyzeColumns(data.items, data.display_as_percentage || false);
   const formatCurrency = (amount: number) => {
     return formatCurrencyUtil(amount, data.currency || 'KES');
   };

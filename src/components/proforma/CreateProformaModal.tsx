@@ -66,6 +66,7 @@ export const CreateProformaModal = ({
     valid_until: '',
     notes: '',
     terms_and_conditions: '',
+    display_as_percentage: false,
   });
 
   const [items, setItems] = useState<ProformaItem[]>([]);
@@ -246,6 +247,7 @@ export const CreateProformaModal = ({
         total_amount: totals.total,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        display_as_percentage: formData.display_as_percentage,
       };
 
       // Convert items to proforma items format (simplified for current schema)
@@ -610,6 +612,17 @@ export const CreateProformaModal = ({
                 placeholder="Terms and conditions..."
                 rows={3}
               />
+            </div>
+
+            <div className="flex items-center space-x-2 pt-4 border-t">
+              <Checkbox
+                id="display-as-percentage"
+                checked={formData.display_as_percentage}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, display_as_percentage: !!checked }))}
+              />
+              <Label htmlFor="display-as-percentage" className="font-medium cursor-pointer">
+                Display as progressive percentages
+              </Label>
             </div>
           </div>
 

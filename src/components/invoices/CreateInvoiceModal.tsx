@@ -82,6 +82,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
   const [showCalculatedValuesInTerms, setShowCalculatedValuesInTerms] = useState(false);
   const [previousTermsLoaded, setPreviousTermsLoaded] = useState(false);
+  const [displayAsPercentage, setDisplayAsPercentage] = useState(false);
 
   const [sections, setSections] = useState<InvoiceSection[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
@@ -474,6 +475,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         currency: currency,
         terms_and_conditions: termsAndConditions,
         notes: notes,
+        display_as_percentage: displayAsPercentage,
         created_by: profile.id
       };
 
@@ -554,6 +556,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setLpoNumber('');
     setNotes('');
     setTermsAndConditions('Payment due within 30 days of invoice date.');
+    setDisplayAsPercentage(false);
     setSections([]);
     setSearchProduct('');
     setNewSectionName('');
@@ -684,6 +687,17 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                       Show calculated values (e.g., 50% (KES 50,000))
                     </Label>
                   </div>
+                </div>
+
+                <div className="flex items-center space-x-2 pt-4 border-t">
+                  <Checkbox
+                    id="display-as-percentage"
+                    checked={displayAsPercentage}
+                    onCheckedChange={(checked) => setDisplayAsPercentage(!!checked)}
+                  />
+                  <Label htmlFor="display-as-percentage" className="font-medium cursor-pointer">
+                    Display as progressive percentages
+                  </Label>
                 </div>
               </CardContent>
             </Card>
