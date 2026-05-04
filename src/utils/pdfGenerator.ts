@@ -2565,7 +2565,7 @@ export const generatePDF = async (data: DocumentData) => {
           }
         </style>
       </head>
-      <body>
+      <body${data.type === 'receipt' ? ' class="receipt-document"' : ''}>
         ${pagesHtml}
       </body>
       </html>
@@ -3041,7 +3041,24 @@ export const generatePDF = async (data: DocumentData) => {
           font-size: 10px;
           color: #000;
         }
-        
+
+        /* Receipt-specific bottom spacing fix to prevent blank pages */
+        body.receipt-document .footer {
+          margin-bottom: 0;
+          padding-bottom: 0;
+          page-break-after: auto;
+        }
+
+        body.receipt-document .page:last-of-type {
+          padding-bottom: 15mm;
+          margin-bottom: 0;
+          page-break-after: auto;
+        }
+
+        body.receipt-document .payment-details-table:last-of-type {
+          margin-bottom: 0;
+        }
+
         .delivery-info-section {
           margin: 6px 0;
           padding: 8px;

@@ -126,6 +126,11 @@ export const PDF_PAGE_CSS = `
     padding-bottom: 20mm;
   }
 
+  /* Receipt-specific: Remove bottom padding to prevent blank pages */
+  body.receipt-document {
+    padding-bottom: 0;
+  }
+
   /* Footer positioning */
   .footer,
   .pagefoot {
