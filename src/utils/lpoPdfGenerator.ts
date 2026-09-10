@@ -80,10 +80,10 @@ export const generateLPOPDF = (lpo: LPOPDFData, company?: CompanyData) => {
       <td class="center">${item.products?.name || 'N/A'}</td>
       <td>${item.description}</td>
       <td class="center">${item.quantity} ${item.products?.unit_of_measure || 'pcs'}</td>
-      <td class="amount">${formatCurrencyForPDF(item.unit_price)}</td>
+      <td class="amount">${formatCurrencyForPDF(item.unit_price, lpo.currency || 'KES')}</td>
       <td class="center">${item.tax_rate}%</td>
-      <td class="amount">${formatCurrencyForPDF(item.tax_amount)}</td>
-      <td class="amount">${formatCurrencyForPDF(item.line_total)}</td>
+      <td class="amount">${formatCurrencyForPDF(item.tax_amount, lpo.currency || 'KES')}</td>
+      <td class="amount">${formatCurrencyForPDF(item.line_total, lpo.currency || 'KES')}</td>
     </tr>
   `).join('') || '';
 
@@ -411,15 +411,15 @@ export const generateLPOPDF = (lpo: LPOPDFData, company?: CompanyData) => {
             <div class="totals">
               <div class="total-row">
                 <span>Subtotal:</span>
-                <span>${formatCurrencyForPDF(lpo.subtotal)}</span>
+                <span>${formatCurrencyForPDF(lpo.subtotal, lpo.currency || 'KES')}</span>
               </div>
               <div class="total-row">
                 <span>Tax Amount:</span>
-                <span>${formatCurrencyForPDF(lpo.tax_amount)}</span>
+                <span>${formatCurrencyForPDF(lpo.tax_amount, lpo.currency || 'KES')}</span>
               </div>
               <div class="total-row final">
                 <span>Total Amount:</span>
-                <span>${formatCurrencyForPDF(lpo.total_amount)}</span>
+                <span>${formatCurrencyForPDF(lpo.total_amount, lpo.currency || 'KES')}</span>
               </div>
             </div>
           </div>

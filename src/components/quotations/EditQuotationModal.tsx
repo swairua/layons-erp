@@ -613,6 +613,14 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
                       ))}
                     </SelectContent>
                   </Select>
+                  {quotation.currency && quotation.currency !== (currentCompany?.currency || 'KES') && quotation.exchange_rate && quotation.exchange_rate > 0 && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      <span>
+                        1 {quotation.currency} = {quotation.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
+                        <span className="text-xs ml-1">(rate locked at creation)</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

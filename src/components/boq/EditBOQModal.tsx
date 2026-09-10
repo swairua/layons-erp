@@ -743,6 +743,14 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess, company }: Ed
                   <SelectItem value="GBP">GBP - British Pound</SelectItem>
                 </SelectContent>
               </Select>
+              {boq.currency && boq.currency !== (currentCompany?.currency || 'KES') && boq.exchange_rate && boq.exchange_rate > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  <span>
+                    1 {boq.currency} = {boq.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
+                    <span className="text-xs ml-1">(rate locked at creation)</span>
+                  </span>
+                </div>
+              )}
             </div>
             <div>
               <Label>Tax Amount</Label>

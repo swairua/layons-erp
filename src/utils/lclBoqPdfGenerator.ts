@@ -20,6 +20,7 @@ export interface ItemSnapshot {
 export interface LCLBOQPdfOptions {
   customTitle?: string;
   stampImageUrl?: string;
+  currency?: string;
 }
 
 /**
@@ -220,7 +221,7 @@ export async function downloadLCLBOQPDF(
 ) {
   const flatItems = flattenLCLBOQItems(data);
 
-  const currency = 'KES';
+  const currency = (data as any).currency || options?.currency || 'KES';
   const subtotal = data.grand_total;
 
   const pdfData = {

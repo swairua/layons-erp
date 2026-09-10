@@ -31,12 +31,15 @@ import {
   User,
   Building2,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { useCreateLPO, useGenerateLPONumber, useAllSuppliersAndCustomers, useProducts, useCompanies, useCreateCustomer } from '@/hooks/useDatabase';
 import { toast } from '@/utils/safeToast';
 import { validateLPO } from '@/utils/lpoValidation';
 import { validateSupplierSelection, ValidationResult } from '@/utils/customerSupplierValidation';
+import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 function formatErrorMessage(error: any): string {
   if (!error) return 'Unknown error occurred';
@@ -82,6 +85,15 @@ export const CreateLPOModal = ({
   });
 
   const [items, setItems] = useState<LPOItem[]>([]);
+  const [currency, setCurrency] = useState(currentCompany?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [lpoNumber, setLpoNumber] = useState('');
@@ -327,6 +339,8 @@ export const CreateLPOModal = ({
         contact_phone: formData.contact_phone,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        currency: currency,
+        exchange_rate: exchangeRate,
       };
 
       const lpoItems = items.map(item => ({
@@ -384,6 +398,8 @@ export const CreateLPOModal = ({
       notes: '',
       terms_and_conditions: 'Payment terms: Net 30 days\nDelivery: As per agreed schedule\nQuality: All items must meet specified standards',
     });
+    setCurrency(currentCompany?.currency || 'KES');
+    setExchangeRate(1);
     setItems([]);
     setSearchTerm('');
     setShowProductSearch(false);
@@ -759,6 +775,40 @@ export const CreateLPOModal = ({
                   placeholder="+254 700 000000"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Currency Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCY_SELECT_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isForeignCurrency && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  {rateLoading ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Fetching exchange rate...</span>
+                    </>
+                  ) : (
+                    <span>
+                      1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                      <span className="text-xs ml-1">(locked at creation)</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

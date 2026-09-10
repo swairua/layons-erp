@@ -88,7 +88,8 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
             description: 'Unallocated payment',
             debit: 0,
             credit: unallocatedAmount,
-            balance: 0
+            balance: 0,
+            currency: payment.currency || 'KES'
           }]
         : allocatedTransactions;
     });
@@ -101,7 +102,8 @@ const computeCustomerStatements = (customers: any[], invoices: any[], payments: 
         description: `Invoice - ${inv.invoice_number}`,
         debit: Number(inv.total_amount) || 0,
         credit: 0,
-        balance: 0
+        balance: 0,
+        currency: inv.currency || 'KES'
       })),
       ...paymentTransactions
     ];
@@ -208,10 +210,10 @@ const StatementOfAccounts = () => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number, currency: string = 'KES') => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'KES',
+      currency: currency,
       minimumFractionDigits: 2
     }).format(amount);
   };
@@ -473,13 +475,13 @@ const StatementOfAccounts = () => {
                               <TableCell className="font-medium">{transaction.reference}</TableCell>
                               <TableCell>{transaction.description}</TableCell>
                               <TableCell className="text-right text-destructive">
-                                {transaction.debit > 0 ? formatCurrency(transaction.debit) : ''}
+                                {transaction.debit > 0 ? formatCurrency(transaction.debit, transaction.currency) : ''}
                               </TableCell>
                               <TableCell className="text-right text-success">
-                                {transaction.credit > 0 ? formatCurrency(transaction.credit) : ''}
+                                {transaction.credit > 0 ? formatCurrency(transaction.credit, transaction.currency) : ''}
                               </TableCell>
                               <TableCell className="text-right font-medium">
-                                {formatCurrency(transaction.balance)}
+                                {formatCurrency(transaction.balance, transaction.currency)}
                               </TableCell>
                             </TableRow>
                           ))}

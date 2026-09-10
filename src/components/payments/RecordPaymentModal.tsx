@@ -26,7 +26,8 @@ import {
   Calendar,
   Receipt,
   User,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseErrorMessageWithCodes } from '@/utils/errorHelpers';
@@ -37,6 +38,8 @@ import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { PaymentAllocationQuickFix } from './PaymentAllocationQuickFix';
 import { autoCreateCashReceipt } from '@/utils/autoCreateCashReceipt';
+import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 interface RecordPaymentModalProps {
   open: boolean;
@@ -65,6 +68,15 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [allocationFailed, setAllocationFailed] = useState(false);
+  const [currency, setCurrency] = useState('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
 
   // Reset allocation failed state when modal closes
   useEffect(() => {
@@ -157,7 +169,9 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
         amount: amount,
         payment_method: mapPaymentMethod(paymentData.payment_method),
         reference_number: paymentData.reference_number || paymentNumber,
-        notes: paymentData.notes
+        notes: paymentData.notes,
+        currency: currency,
+        exchange_rate: exchangeRate,
       };
 
       const result = await createPaymentMutation.mutateAsync(paymentRecord);
@@ -250,6 +264,8 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
       notes: '',
       customer_name: invoice?.customers?.name || ''
     });
+    setCurrency('KES');
+    setExchangeRate(1);
     setAllocationFailed(false);
   };
 
@@ -396,6 +412,37 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Currency Selection */}
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_SELECT_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isForeignCurrency && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    {rateLoading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Fetching exchange rate...</span>
+                      </>
+                    ) : (
+                      <span>
+                        1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                        <span className="text-xs ml-1">(locked at creation)</span>
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
               {/* Payment Amount */}
               <div className="space-y-2">
                 <Label htmlFor="amount">Payment Amount (KES) *</Label>

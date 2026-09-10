@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { useCustomers, useGenerateDocumentNumber, useTaxSettings, useCompanies, useProducts } from '@/hooks/useDatabase';
 import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
@@ -77,6 +78,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [currency, setCurrency] = useState('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
@@ -99,6 +102,13 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const createInvoiceWithItems = useCreateInvoiceWithItems();
   const generateDocNumber = useGenerateDocumentNumber();
+
+  // Sync exchange rate when fetched
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
 
   // Get default tax rate
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
@@ -473,6 +483,7 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
         paid_amount: 0,
         balance_due: grandTotal,
         currency: currency,
+        exchange_rate: exchangeRate,
         terms_and_conditions: termsAndConditions,
         notes: notes,
         display_as_percentage: displayAsPercentage,
@@ -552,7 +563,8 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
     setSelectedCustomerId(preSelectedCustomer?.id || '');
     setInvoiceDate(new Date().toISOString().split('T')[0]);
     setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-    setCurrency('KES');
+    setCurrency(currentCompany?.currency || 'KES');
+    setExchangeRate(1);
     setLpoNumber('');
     setNotes('');
     setTermsAndConditions('Payment due within 30 days of invoice date.');
@@ -645,6 +657,21 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
                       ))}
                     </SelectContent>
                   </Select>
+                  {isForeignCurrency && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                      {rateLoading ? (
+                        <>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span>Fetching exchange rate...</span>
+                        </>
+                      ) : (
+                        <span>
+                          1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                          <span className="text-xs ml-1">(locked at creation)</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

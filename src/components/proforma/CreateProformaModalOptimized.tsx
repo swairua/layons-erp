@@ -29,12 +29,14 @@ import {
   Receipt,
   Loader2
 } from 'lucide-react';
-import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
+import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { useCreateProforma, type ProformaItem } from '@/hooks/useProforma';
 import { calculateItemTax, calculateDocumentTotals, formatCurrency, type TaxableItem } from '@/utils/taxCalculation';
 import { generateNextProformaNumber } from '@/utils/improvedProformaFix';
 import { ProformaErrorSolution } from '@/components/fixes/ProformaErrorSolution';
 import { toast } from 'sonner';
+import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 interface CreateProformaModalOptimizedProps {
   open: boolean;
@@ -64,11 +66,22 @@ export const CreateProformaModalOptimized = ({
   const [isGeneratingNumber, setIsGeneratingNumber] = useState(false);
   const [functionError, setFunctionError] = useState<string>('');
   const [createError, setCreateError] = useState<string>('');
+  const [currency, setCurrency] = useState('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
 
   const { data: customers, isLoading: customersLoading } = useCustomers(companyId);
   const { data: products, isLoading: productsLoading } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
+  const { data: companies } = useCompanies();
+  const currentCompany = companies?.[0];
   const createProforma = useCreateProforma();
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
@@ -227,6 +240,8 @@ export const CreateProformaModalOptimized = ({
         total_amount: totals.total_amount,
         notes: formData.notes,
         terms_and_conditions: formData.terms_and_conditions,
+        currency: currency,
+        exchange_rate: exchangeRate,
       };
 
       await createProforma.mutateAsync({
@@ -259,6 +274,8 @@ export const CreateProformaModalOptimized = ({
     setProformaNumber('');
     setFunctionError('');
     setCreateError('');
+    setCurrency('KES');
+    setExchangeRate(1);
     onOpenChange(false);
   };
 
@@ -356,6 +373,36 @@ export const CreateProformaModalOptimized = ({
                   value={formData.valid_until}
                   onChange={(e) => setFormData(prev => ({ ...prev, valid_until: e.target.value }))}
                 />
+              </div>
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCY_SELECT_OPTIONS.map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isForeignCurrency && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    {rateLoading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Fetching exchange rate...</span>
+                      </>
+                    ) : (
+                      <span>
+                        1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                        <span className="text-xs ml-1">(locked at creation)</span>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

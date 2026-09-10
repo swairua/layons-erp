@@ -29,7 +29,8 @@ import {
   Search,
   Calculator,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Loader2
 } from 'lucide-react';
 import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
@@ -38,6 +39,7 @@ import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
 import { supabase } from '@/integrations/supabase/client';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 interface QuotationItem {
   id: string;
@@ -73,6 +75,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [currency, setCurrency] = useState('KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
   const [previousTermsLoaded, setPreviousTermsLoaded] = useState(false);
@@ -91,6 +94,13 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
   const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
 
   // Initialize with a default section when modal opens
   useEffect(() => {
@@ -460,6 +470,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
         tax_amount: totalTax,
         total_amount: grandTotal,
         currency: currency,
+        exchange_rate: exchangeRate,
         terms_and_conditions: termsAndConditions,
         notes: notes,
         display_as_percentage: displayAsPercentage,
@@ -578,6 +589,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
     setQuotationDate(new Date().toISOString().split('T')[0]);
     setValidUntil(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
     setCurrency('KES');
+    setExchangeRate(1);
     setNotes('');
     setTermsAndConditions('Payment due within 30 days of invoice date.');
     setDisplayAsPercentage(false);
@@ -674,6 +686,21 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                     </SelectContent>
                   </Select>
                 </div>
+                {isForeignCurrency && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    {rateLoading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Fetching exchange rate...</span>
+                      </>
+                    ) : (
+                      <span>
+                        1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                        <span className="text-xs ml-1">(locked at creation)</span>
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="notes">Notes</Label>

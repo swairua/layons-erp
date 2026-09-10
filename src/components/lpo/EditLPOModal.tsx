@@ -336,6 +336,15 @@ export const EditLPOModal = ({
             </div>
           </div>
 
+          {lpo.currency && lpo.currency !== (currentCompany?.currency || 'KES') && lpo.exchange_rate && lpo.exchange_rate > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                1 {lpo.currency} = {lpo.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
+                <span className="text-xs ml-1">(rate locked at creation)</span>
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="contact_person">Contact Person</Label>

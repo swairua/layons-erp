@@ -610,12 +610,14 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string | null
+          currency: string | null
           customer_id: string | null
           delivered_by: string | null
           delivery_address: string | null
           delivery_date: string
           delivery_method: string | null
           delivery_number: string
+          exchange_rate: number | null
           id: string
           invoice_id: string | null
           notes: string | null
@@ -629,12 +631,14 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
           delivered_by?: string | null
           delivery_address?: string | null
           delivery_date: string
           delivery_method?: string | null
           delivery_number: string
+          exchange_rate?: number | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
@@ -648,12 +652,14 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
           delivered_by?: string | null
           delivery_address?: string | null
           delivery_date?: string
           delivery_method?: string | null
           delivery_number?: string
+          exchange_rate?: number | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
@@ -766,9 +772,11 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string | null
+          currency: string | null
           customer_id: string | null
           discount_amount: number | null
           due_date: string
+          exchange_rate: number | null
           id: string
           invoice_date: string
           invoice_number: string
@@ -789,9 +797,11 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
           due_date: string
+          exchange_rate?: number | null
           id?: string
           invoice_date: string
           invoice_number: string
@@ -812,9 +822,11 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
           due_date?: string
+          exchange_rate?: number | null
           id?: string
           invoice_date?: string
           invoice_number?: string
@@ -927,8 +939,10 @@ export type Database = {
           contact_phone: string | null
           created_at: string | null
           created_by: string | null
+          currency: string | null
           delivery_address: string | null
           delivery_date: string | null
+          exchange_rate: number | null
           id: string
           lpo_date: string
           lpo_number: string
@@ -947,8 +961,10 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           delivery_address?: string | null
           delivery_date?: string | null
+          exchange_rate?: number | null
           id?: string
           lpo_date?: string
           lpo_number: string
@@ -967,8 +983,10 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           delivery_address?: string | null
           delivery_date?: string | null
+          exchange_rate?: number | null
           id?: string
           lpo_date?: string
           lpo_number?: string
@@ -1121,7 +1139,9 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string | null
+          currency: string | null
           customer_id: string | null
+          exchange_rate: number | null
           id: string
           invoice_id: string | null
           notes: string | null
@@ -1136,7 +1156,9 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
+          exchange_rate?: number | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
@@ -1151,7 +1173,9 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
+          exchange_rate?: number | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
@@ -1605,8 +1629,10 @@ export type Database = {
           company_id: string | null
           created_at: string | null
           created_by: string | null
+          currency: string | null
           customer_id: string | null
           discount_amount: number | null
+          exchange_rate: number | null
           id: string
           notes: string | null
           quotation_date: string
@@ -1623,8 +1649,10 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          exchange_rate?: number | null
           id?: string
           notes?: string | null
           quotation_date: string
@@ -1641,8 +1669,10 @@ export type Database = {
           company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          exchange_rate?: number | null
           id?: string
           notes?: string | null
           quotation_date?: string

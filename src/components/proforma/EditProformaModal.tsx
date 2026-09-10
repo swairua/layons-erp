@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 
 interface ProformaItem {
@@ -95,6 +96,7 @@ export const EditProformaModal = ({
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [previewItem, setPreviewItem] = useState<string | null>(null);
 
+  const { currentCompany } = useCurrentCompany();
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
@@ -343,6 +345,15 @@ export const EditProformaModal = ({
               />
             </div>
           </div>
+
+          {(proforma as any).currency && (proforma as any).currency !== (currentCompany?.currency || 'KES') && (proforma as any).exchange_rate && (proforma as any).exchange_rate > 0 && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                1 {(proforma as any).currency} = {(proforma as any).exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
+                <span className="text-xs ml-1">(rate locked at creation)</span>
+              </span>
+            </div>
+          )}
 
           {/* Items Section */}
           <Card>

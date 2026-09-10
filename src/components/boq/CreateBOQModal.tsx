@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, Calculator, Layers, Check } from 'lucide-react';
+import { Plus, Trash2, Calculator, Layers, Check, Loader2 } from 'lucide-react';
 import { useCustomers, useUnits, useBOQs } from '@/hooks/useDatabase';
 import { CreateUnitModal } from '@/components/units/CreateUnitModal';
 import { BOQSaveIndicator } from '@/components/boq/BOQSaveIndicator';
@@ -33,6 +33,8 @@ import { generateNextBOQNumber, invalidateBOQNumberCache } from '@/utils/boqNumb
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { saveBoqDraft, loadBoqDraft, deleteDraft, isDraftStale } from '@/services/boqAutoSaveService';
+import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 // Safe UUID generator that works in all environments
 const generateSafeUUID = (): string => {
@@ -140,9 +142,17 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   const [previousTermsLoaded, setPreviousTermsLoaded] = useState(false);
   const [showCalculatedValuesInTerms, setShowCalculatedValuesInTerms] = useState(false);
   const [currency, setCurrency] = useState(currentCompany?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [taxAmount, setTaxAmount] = useState<number | ''>('');
-  const [attachmentUrl, setAttachmentUrl] = useState('');
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
   const [boqStatus, setBoqStatus] = useState('draft');
+  const [attachmentUrl, setAttachmentUrl] = useState('');
   const [sections, setSections] = useState<BOQSectionRow[]>([defaultSection()]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -626,6 +636,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
         contractor: contractor || null,
         project_title: projectTitle || null,
         currency: currency,
+        exchange_rate: exchangeRate,
         subtotal: filledSubtotal,
         tax_amount: finalTaxAmount,
         total_amount: finalTotal,
@@ -739,6 +750,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
     setTermsAndConditions(currentCompany?.default_terms_and_conditions || '');
     setShowCalculatedValuesInTerms(false);
     setCurrency(currentCompany?.currency || 'KES');
+    setExchangeRate(1);
     setSections([defaultSection()]);
     setLastAutosavedAt(null);
 
@@ -844,12 +856,28 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
                   <SelectValue placeholder="Select currency" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="KES">KES - Kenyan Shilling</SelectItem>
-                  <SelectItem value="USD">USD - US Dollar</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro</SelectItem>
-                  <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                  {CURRENCY_SELECT_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {isForeignCurrency && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                  {rateLoading ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Fetching exchange rate...</span>
+                    </>
+                  ) : (
+                    <span>
+                      1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                      <span className="text-xs ml-1">(locked at creation)</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <Label>Tax Amount</Label>
