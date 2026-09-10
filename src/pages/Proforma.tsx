@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Table,
   TableBody,
@@ -45,7 +45,6 @@ export default function Proforma() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedProforma, setSelectedProforma] = useState<ProformaWithItems | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Set status filter from URL params
@@ -60,23 +59,24 @@ export default function Proforma() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 
+  const pagination = useServerPagination({ initialPageSize: 10 });
+
   // Use proper proforma hooks
-  const { data: proformas = [], isLoading, refetch } = useProformas(currentCompany?.id);
+  const { data: proformaData, isLoading, refetch } = useProformas(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const proformas = proformaData?.data || [];
+  const totalProformas = proformaData?.total || 0;
   const convertToInvoice = useConvertProformaToInvoice();
 
+  // Client-side status filter (applied on server-filtered results)
   const filteredProformas = proformas.filter(proforma => {
-    const matchesSearch =
-      proforma.proforma_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      proforma.customers?.name.toLowerCase().includes(searchTerm.toLowerCase());
-
     const matchesStatus = statusFilter === 'all' || proforma.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
-
-  // Pagination hook
-  const pagination = usePagination(filteredProformas, { initialPageSize: 10 });
-  const paginatedProformas = pagination.paginatedItems;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -244,8 +244,8 @@ export default function Proforma() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search proformas..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={pagination.debouncedSearch}
+                  onChange={(e) => pagination.setSearch(e.target.value)}
                   className="pl-10 w-64"
                 />
               </div>
@@ -288,9 +288,9 @@ export default function Proforma() {
               <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No proforma invoices found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm ? 'No proformas match your search.' : 'Create your first proforma invoice to get started.'}
+                {pagination.debouncedSearch ? 'No proformas match your search.' : 'Create your first proforma invoice to get started.'}
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Proforma
@@ -312,7 +312,7 @@ export default function Proforma() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedProformas.map((proforma) => (
+                  {filteredProformas.map((proforma) => (
                     <TableRow key={proforma.id}>
                       <TableCell className="font-medium">
                         {proforma.proforma_number}
@@ -405,11 +405,11 @@ export default function Proforma() {
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalProformas / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalProformas}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

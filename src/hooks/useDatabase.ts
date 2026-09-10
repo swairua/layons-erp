@@ -306,20 +306,39 @@ export const useUpdateCompany = () => {
 };
 
 // Customers hooks
-export const useCustomers = (companyId?: string) => {
+export const useCustomers = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['customers', companyId],
+    queryKey: ['customers', companyId, fetchAll ? 'all' : page, pageSize, search],
     enabled: !!companyId,
     queryFn: async () => {
-      if (!companyId) return [];
-      const { data, error } = await supabase
+      if (!companyId) return { data: [], total: 0 };
+      let query = supabase
         .from('customers')
-        .select('*')
+        .select('*', { count: fetchAll ? undefined : 'exact' })
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,customer_code.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`);
+      }
+
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
+      const { data, error, count } = await query;
+
       if (error) throw error;
-      return data as Customer[];
+      return fetchAll ? { data: (data as Customer[]) || [], total: (data || []).length } : { data: (data as Customer[]) || [], total: count || 0 };
     },
   });
 };
@@ -385,26 +404,46 @@ export const useDeleteCustomer = () => {
 };
 
 // Products hooks
-export const useProducts = (companyId?: string) => {
+export const useProducts = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['products', companyId],
+    queryKey: ['products', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
       let query = supabase
         .from('products')
         .select(`
           *,
           product_categories(name)
-        `)
+        `, { count: fetchAll ? undefined : 'exact' })
         .order('created_at', { ascending: false });
       
       if (companyId) {
         query = query.eq('company_id', companyId);
       }
+
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,product_code.ilike.%${search}%,product_categories.name.ilike.%${search}%`);
+      }
+
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
       
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       
       if (error) throw error;
-      return data;
+      return fetchAll
+        ? { data: data || [], total: (data || []).length }
+        : { data: data || [], total: count || 0 };
     },
   });
 };
@@ -763,15 +802,36 @@ export const useDeleteUnit = () => {
 };
 
 // Invoices hooks - Fixed to avoid relationship ambiguity
-export const useInvoices = (companyId?: string) => {
+export const useInvoices = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['invoices', companyId],
+    queryKey: ['invoices', companyId, fetchAll ? 'all' : page, pageSize, search],
     enabled: !!companyId,
     queryFn: async () => {
-      if (!companyId) return [];
+      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
 
       try {
-        // Step 1: Get invoices without embedded relationships
+        // If searching by customer name, first find matching customer IDs
+        let matchingCustomerIds: string[] | null = null;
+        if (search) {
+          const { data: matchedCustomers } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('company_id', companyId)
+            .or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          matchingCustomerIds = (matchedCustomers || []).map(c => c.id);
+        }
+
+        // Step 1: Get invoices with pagination
         let query = supabase
           .from('invoices')
           .select(`
@@ -792,43 +852,45 @@ export const useInvoices = (companyId?: string) => {
             lpo_number,
             created_at,
             updated_at
-          `)
+          `, { count: fetchAll ? undefined : 'exact' })
           .eq('company_id', companyId)
           .order('created_at', { ascending: false });
 
-        const { data: invoices, error: invoicesError } = await query;
+        if (search) {
+          if (matchingCustomerIds && matchingCustomerIds.length > 0) {
+            query = query.or(`invoice_number.ilike.%${search}%,customer_id.in.(${matchingCustomerIds.join(',')})`);
+          } else {
+            query = query.ilike('invoice_number', `%${search}%`);
+          }
+        }
+
+        if (!fetchAll) {
+          query = query.range(from, to);
+        }
+
+        const { data: invoices, error: invoicesError, count } = await query;
 
         if (invoicesError) throw invoicesError;
-        if (!invoices || invoices.length === 0) return [];
+        if (!invoices || invoices.length === 0) {
+          return fetchAll ? [] : { data: [], total: count || 0 };
+        }
 
-        // Step 2: Get customers separately (filter out invalid UUIDs)
+        // Step 2: Get customers
         const customerIds = [...new Set(invoices.map(invoice => invoice.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
         const { data: customers } = customerIds.length > 0 ? await supabase
           .from('customers')
           .select('id, name, email, phone, address, city, country')
           .in('id', customerIds) : { data: [] };
 
-        // Step 3: Get invoice items separately (including product details for delivery notes)
+        // Step 3: Get invoice items for paginated invoices only
         const invoiceIds = invoices.map(inv => inv.id);
         const { data: invoiceItems } = invoiceIds.length > 0 ? await supabase
           .from('invoice_items')
           .select(`
-            id,
-            invoice_id,
-            product_id,
-            description,
-            quantity,
-            unit_price,
-            discount_before_vat,
-            tax_percentage,
-            tax_amount,
-            tax_inclusive,
-            line_total,
-            sort_order,
-            section_name,
-            section_labor_cost,
-            unit_of_measure,
-            products(id, name, product_code, unit_of_measure)
+            id, invoice_id, product_id, description, quantity, unit_price,
+            discount_before_vat, tax_percentage, tax_amount, tax_inclusive,
+            line_total, sort_order, section_name, section_labor_cost,
+            unit_of_measure, products(id, name, product_code, unit_of_measure)
           `)
           .in('invoice_id', invoiceIds) : { data: [], error: null };
 
@@ -847,7 +909,7 @@ export const useInvoices = (companyId?: string) => {
         });
 
         // Step 5: Combine data
-        return invoices.map(invoice => ({
+        const enrichedInvoices = invoices.map(invoice => ({
           ...invoice,
           customers: customerMap.get(invoice.customer_id) || {
             name: 'Unknown Customer',
@@ -857,9 +919,10 @@ export const useInvoices = (companyId?: string) => {
           invoice_items: itemsMap.get(invoice.id) || []
         }));
 
+        return fetchAll ? enrichedInvoices : { data: enrichedInvoices, total: count || 0 };
+
       } catch (error) {
         console.error('Error in useInvoices:', error);
-        // Import parseErrorMessage at the top if not already imported
         const errorMessage = typeof error === 'string' ? error :
                             (error as any)?.message ||
                             'Failed to load invoices';
@@ -1008,152 +1071,109 @@ export const useCreateInvoice = () => {
 };
 
 // Payments hooks
-export const usePayments = (companyId?: string) => {
+export const usePayments = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['payments', companyId],
+    queryKey: ['payments', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
-      if (!companyId) return [];
+      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
 
       try {
-        // Step 1: Get payments without embedded relationships
+        // If searching by customer name, first find matching customer IDs
+        let matchingCustomerIds: string[] | null = null;
+        if (search) {
+          const { data: matchedCustomers } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('company_id', companyId)
+            .or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          matchingCustomerIds = (matchedCustomers || []).map(c => c.id);
+        }
+
+        // Step 1: Get payments with pagination
         let query = supabase
           .from('payments')
           .select(`
-            id,
-            company_id,
-            customer_id,
-            payment_number,
-            payment_date,
-            amount,
-            payment_method,
-            reference_number,
-            notes,
-            created_at,
-            updated_at
-          `)
+            id, company_id, customer_id, payment_number, payment_date,
+            amount, payment_method, reference_number, notes, created_at, updated_at
+          `, { count: fetchAll ? undefined : 'exact' })
           .eq('company_id', companyId)
           .order('payment_date', { ascending: false })
           .order('created_at', { ascending: false })
           .order('id', { ascending: false });
 
-        const { data: payments, error: paymentsError } = await query;
-
-        if (paymentsError) {
-          console.error('Error fetching payments from Supabase:', paymentsError);
-          throw paymentsError;
+        if (search) {
+          if (matchingCustomerIds && matchingCustomerIds.length > 0) {
+            query = query.or(`payment_number.ilike.%${search}%,customer_id.in.(${matchingCustomerIds.join(',')})`);
+          } else {
+            query = query.ilike('payment_number', `%${search}%`);
+          }
         }
-        if (!payments || payments.length === 0) return [];
 
-        // Step 2: Get customers separately (filter out invalid UUIDs)
+        if (!fetchAll) {
+          query = query.range(from, to);
+        }
+
+        const { data: payments, error: paymentsError, count } = await query;
+
+        if (paymentsError) throw paymentsError;
+        if (!payments || payments.length === 0) {
+          return fetchAll ? [] : { data: [], total: count || 0 };
+        }
+
+        // Step 2: Get customers
         let customers: any[] = [];
         try {
-          const customerIds = [...new Set(payments.map(payment => payment.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
+          const customerIds = [...new Set(payments.map(p => p.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
           if (customerIds.length > 0) {
             const { data, error } = await supabase
               .from('customers')
               .select('id, name, email, phone, address, city, country')
               .in('id', customerIds);
-            if (!error && data) {
-              customers = data;
-            } else if (error) {
-              console.warn('Could not fetch customers (non-fatal):', error.message);
-            }
+            if (!error && data) customers = data;
           }
         } catch (err) {
           console.warn('Error fetching customers:', err);
         }
 
-        // Step 3: Get payment allocations separately
+        // Step 3: Get payment allocations
         let paymentAllocations: any[] = [];
         try {
-          const paymentIds = payments.map(payment => payment.id);
-          console.log('Fetching payment allocations for payment IDs:', paymentIds.length > 0 ? paymentIds.slice(0, 3) + '...' : 'none');
-
+          const paymentIds = payments.map(p => p.id);
           const { data, error } = await supabase
             .from('payment_allocations')
-            .select(`
-              id,
-              payment_id,
-              invoice_id,
-              amount_allocated,
-              created_at
-            `)
+            .select(`id, payment_id, invoice_id, amount_allocated, created_at`)
             .in('payment_id', paymentIds);
-
-          if (!error && data) {
-            console.log(`✅ Fetched ${data.length} payment allocations`);
-            paymentAllocations = data;
-          } else if (error) {
-            console.warn('⚠️ Could not fetch payment allocations:', error.message);
-          }
+          if (!error && data) paymentAllocations = data;
         } catch (err) {
           console.warn('Error fetching payment allocations:', err);
         }
 
-        // Step 3b: Get invoice details separately to avoid RLS issues with relationships
+        // Step 3b: Get invoice details
         let invoiceMap = new Map();
         try {
           if (paymentAllocations.length > 0) {
-            const allInvoiceIds = paymentAllocations.map(a => a.invoice_id);
-            const nullInvoiceIds = allInvoiceIds.filter(id => !id);
-            const validInvoiceIds = [...new Set(allInvoiceIds.filter(Boolean))];
-
-            console.log('Payment allocations:', paymentAllocations);
-            console.log('Raw invoice IDs from allocations:', allInvoiceIds);
-            console.log('Null/missing invoice IDs:', nullInvoiceIds.length);
-            console.log('Valid invoice IDs:', validInvoiceIds);
-            console.log('Fetching invoice details for company:', companyId);
-            console.log('Total valid invoice IDs to fetch:', validInvoiceIds.length);
-
+            const validInvoiceIds = [...new Set(paymentAllocations.map(a => a.invoice_id).filter(Boolean))];
             if (validInvoiceIds.length > 0) {
-              // Try to fetch invoices by their IDs
-              let { data: invoiceData, error: invoiceError } = await supabase
+              const { data: invoiceData, error: invoiceError } = await supabase
                 .from('invoices')
                 .select('id, invoice_number, notes, total_amount, paid_amount, balance_due, company_id')
                 .in('id', validInvoiceIds);
 
-              console.log('Invoice fetch result (specific IDs):', {
-                success: !invoiceError,
-                count: invoiceData?.length || 0,
-                error: invoiceError?.message,
-                companyId: companyId,
-                requestedInvoiceIds: validInvoiceIds,
-                fetchedInvoices: invoiceData
-              });
-
               if (!invoiceError && invoiceData && invoiceData.length > 0) {
-                console.log(`✅ Fetched ${invoiceData.length} invoice details via ID filter`);
-                invoiceData.forEach(invoice => {
-                  invoiceMap.set(invoice.id, invoice);
-                });
-              } else {
-                console.warn('⚠️ Invoice ID filter returned no results, trying fallback approach...');
-
-                // Fallback: Fetch all invoices for the company
-                const { data: allInvoices, error: allInvoicesError } = await supabase
-                  .from('invoices')
-                  .select('id, invoice_number, notes, total_amount, paid_amount, balance_due, company_id')
-                  .eq('company_id', companyId);
-
-                console.log('Fallback invoice fetch result (all for company):', {
-                  success: !allInvoicesError,
-                  count: allInvoices?.length || 0,
-                  error: allInvoicesError?.message,
-                  companyId: companyId
-                });
-
-                if (!allInvoicesError && allInvoices) {
-                  // Filter to only the ones we need
-                  const matchedInvoices = allInvoices.filter(inv =>
-                    validInvoiceIds.includes(inv.id)
-                  );
-                  console.log(`✅ Fallback matched ${matchedInvoices.length} invoices`);
-                  matchedInvoices.forEach(invoice => {
-                    invoiceMap.set(invoice.id, invoice);
-                  });
-                }
+                invoiceData.forEach(invoice => invoiceMap.set(invoice.id, invoice));
               }
 
+              // BOQ project titles
               const boqNumbers = [...new Set(
                 [...invoiceMap.values()]
                   .map(invoice => extractBoqNumberFromNotes(invoice.notes))
@@ -1167,14 +1187,6 @@ export const usePayments = (companyId?: string) => {
                 const boqNumber = extractBoqNumberFromNotes(invoice.notes);
                 invoice.project_title = boqNumber ? boqProjectTitles.get(boqNumber) || null : null;
               });
-
-              // Log which invoice IDs were not found
-              const notFoundIds = validInvoiceIds.filter(id => !invoiceMap.has(id));
-              if (notFoundIds.length > 0) {
-                console.warn(`⚠️ ${notFoundIds.length} invoice(s) not found:`, notFoundIds);
-              }
-            } else {
-              console.warn('⚠️ No valid invoice IDs to fetch (all are null or empty)');
             }
           }
         } catch (err) {
@@ -1183,17 +1195,12 @@ export const usePayments = (companyId?: string) => {
 
         // Step 4: Create lookup maps
         const customerMap = new Map();
-        (customers || []).forEach(customer => {
-          customerMap.set(customer.id, customer);
-        });
+        (customers || []).forEach(c => customerMap.set(c.id, c));
 
         const allocationsMap = new Map();
         (paymentAllocations || []).forEach(allocation => {
-          if (!allocationsMap.has(allocation.payment_id)) {
-            allocationsMap.set(allocation.payment_id, []);
-          }
+          if (!allocationsMap.has(allocation.payment_id)) allocationsMap.set(allocation.payment_id, []);
           const invoice = invoiceMap.get(allocation.invoice_id);
-          console.log(`Allocation ${allocation.id}: invoice_id=${allocation.invoice_id}, found_invoice=${!!invoice}, invoice_number=${invoice?.invoice_number || 'N/A'}`);
           allocationsMap.get(allocation.payment_id).push({
             id: allocation.id,
             invoice_number: invoice?.invoice_number || 'N/A',
@@ -1208,28 +1215,20 @@ export const usePayments = (companyId?: string) => {
         });
 
         // Step 5: Combine data
-        return payments.map(payment => ({
+        const enrichedPayments = payments.map(payment => ({
           ...payment,
-          customers: customerMap.get(payment.customer_id) || {
-            name: 'Unknown Customer',
-            email: null,
-            phone: null
-          },
+          customers: customerMap.get(payment.customer_id) || { name: 'Unknown Customer', email: null, phone: null },
           payment_allocations: allocationsMap.get(payment.id) || []
         }));
 
+        return fetchAll ? enrichedPayments : { data: enrichedPayments, total: count || 0 };
+
       } catch (error) {
-        console.error('Error in usePayments:', error);
-
         let errorMessage = 'Failed to load payments';
-
-        // Handle network/fetch errors
         if (error instanceof TypeError) {
-          if ((error as any).message?.includes('Failed to fetch')) {
-            errorMessage = 'Unable to connect to the server. Please check your internet connection and try again. If the problem persists, the Supabase service may be temporarily unavailable.';
-          } else {
-            errorMessage = `Network error: ${(error as any).message || 'Failed to fetch data'}`;
-          }
+          errorMessage = (error as any).message?.includes('Failed to fetch')
+            ? 'Unable to connect to the server. Please check your internet connection.'
+            : `Network error: ${(error as any).message || 'Failed to fetch data'}`;
         } else if (error instanceof Error) {
           errorMessage = error.message;
         } else if (typeof error === 'string') {
@@ -1237,7 +1236,6 @@ export const usePayments = (companyId?: string) => {
         } else if (error && typeof error === 'object') {
           errorMessage = (error as any)?.message || JSON.stringify(error);
         }
-
         throw new Error(errorMessage);
       }
     },
@@ -1683,9 +1681,19 @@ export const useDeletePayment = () => {
 };
 
 // Remittance Advice hooks
-export const useRemittanceAdvice = (companyId?: string) => {
+export const useRemittanceAdvice = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['remittance_advice', companyId],
+    queryKey: ['remittance_advice', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
       let query = supabase
         .from('remittance_advice')
@@ -1693,17 +1701,26 @@ export const useRemittanceAdvice = (companyId?: string) => {
           *,
           customers:customers!customer_id(name, email, address),
           remittance_advice_items(*, payments(payment_number), invoices(invoice_number))
-        `)
+        `, { count: fetchAll ? undefined : 'exact' })
         .order('created_at', { ascending: false });
       
       if (companyId) {
         query = query.eq('company_id', companyId);
       }
-      
-      const { data, error } = await query;
+
+      if (search) {
+        query = query.or(`advice_number.ilike.%${search}%,customers.name.ilike.%${search}%`);
+      }
+
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
+      const { data, error, count } = await query;
       
       if (error) throw error;
-      return data;
+      return fetchAll
+        ? { data: data || [], total: (data || []).length }
+        : { data: data || [], total: count || 0 };
     },
   });
 };
@@ -1841,71 +1858,84 @@ export const useUpdateRemittanceAdviceItems = () => {
 };
 
 // Quotations hooks - Fixed to avoid relationship ambiguity
-export const useQuotations = (companyId?: string) => {
+export const useQuotations = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['quotations', companyId],
+    queryKey: ['quotations', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
-      if (!companyId) return [];
+      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
 
       try {
-        // Step 1: Get quotations without embedded relationships
+        // If searching by customer name, first find matching customer IDs
+        let matchingCustomerIds: string[] | null = null;
+        if (search) {
+          const { data: matchedCustomers } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('company_id', companyId)
+            .or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          matchingCustomerIds = (matchedCustomers || []).map(c => c.id);
+        }
+
+        // Step 1: Get quotations with pagination
         let query = supabase
           .from('quotations')
           .select(`
-            id,
-            company_id,
-            customer_id,
-            quotation_number,
-            quotation_date,
-            valid_until,
-            status,
-            subtotal,
-            tax_amount,
-            total_amount,
-            notes,
-            terms_and_conditions,
-            created_at,
-            updated_at
-          `)
+            id, company_id, customer_id, quotation_number, quotation_date,
+            valid_until, status, subtotal, tax_amount, total_amount,
+            notes, terms_and_conditions, created_at, updated_at
+          `, { count: fetchAll ? undefined : 'exact' })
           .eq('company_id', companyId)
           .neq('status', 'deleted')
           .order('created_at', { ascending: false });
 
-        const { data: quotations, error: quotationsError } = await query;
+        if (search) {
+          if (matchingCustomerIds && matchingCustomerIds.length > 0) {
+            query = query.or(`quotation_number.ilike.%${search}%,customer_id.in.(${matchingCustomerIds.join(',')})`);
+          } else {
+            query = query.ilike('quotation_number', `%${search}%`);
+          }
+        }
+
+        if (!fetchAll) {
+          query = query.range(from, to);
+        }
+
+        const { data: quotations, error: quotationsError, count } = await query;
 
         if (quotationsError) throw quotationsError;
-        if (!quotations || quotations.length === 0) return [];
+        if (!quotations || quotations.length === 0) {
+          return fetchAll ? [] : { data: [], total: count || 0 };
+        }
 
-        // Step 2: Get customers separately (filter out invalid UUIDs)
-        const customerIds = [...new Set(quotations.map(quotation => quotation.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
+        // Step 2: Get customers
+        const customerIds = [...new Set(quotations.map(q => q.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
         const { data: customers } = customerIds.length > 0 ? await supabase
           .from('customers')
           .select('id, name, email, phone, address, city, country')
           .in('id', customerIds) : { data: [] };
 
-        // Step 3: Get quotation items separately
-        const { data: quotationItems } = await supabase
+        // Step 3: Get quotation items
+        const quotationIds = quotations.map(q => q.id);
+        const { data: quotationItems } = quotationIds.length > 0 ? await supabase
           .from('quotation_items')
           .select(`
-            id,
-            quotation_id,
-            product_id,
-            description,
-            quantity,
-            unit_price,
-            discount_percentage,
-            tax_percentage,
-            tax_amount,
-            tax_inclusive,
-            line_total,
-            sort_order,
-            section_name,
-            section_labor_cost,
-            unit_of_measure
+            id, quotation_id, product_id, description, quantity, unit_price,
+            discount_percentage, tax_percentage, tax_amount, tax_inclusive,
+            line_total, sort_order, section_name, section_labor_cost, unit_of_measure
           `)
-          .in('quotation_id', quotations.map(quot => quot.id));
+          .in('quotation_id', quotationIds) : { data: [] };
 
-        // Step 4: Get products for quotation items
+        // Step 4: Get products
         const productIds = [...new Set((quotationItems || []).map(item => item.product_id).filter(id => id))];
         const { data: products } = productIds.length > 0 ? await supabase
           .from('products')
@@ -1914,54 +1944,27 @@ export const useQuotations = (companyId?: string) => {
 
         // Step 5: Create lookup maps
         const customerMap = new Map();
-        (customers || []).forEach(customer => {
-          customerMap.set(customer.id, customer);
-        });
+        (customers || []).forEach(c => customerMap.set(c.id, c));
 
         const productMap = new Map();
-        (products || []).forEach(product => {
-          productMap.set(product.id, product);
-        });
+        (products || []).forEach(p => productMap.set(p.id, p));
 
         const itemsMap = new Map();
         (quotationItems || []).forEach(item => {
-          if (!itemsMap.has(item.quotation_id)) {
-            itemsMap.set(item.quotation_id, []);
-          }
-          itemsMap.get(item.quotation_id).push({
-            ...item,
-            products: productMap.get(item.product_id) || null
-          });
+          if (!itemsMap.has(item.quotation_id)) itemsMap.set(item.quotation_id, []);
+          itemsMap.get(item.quotation_id).push({ ...item, products: productMap.get(item.product_id) || null });
         });
 
         // Step 6: Combine data
-        return quotations.map(quotation => ({
+        const enrichedQuotations = quotations.map(quotation => ({
           ...quotation,
-          customers: customerMap.get(quotation.customer_id) || {
-            name: 'Unknown Customer',
-            email: null,
-            phone: null,
-            address: null,
-            city: null,
-            country: null
-          },
+          customers: customerMap.get(quotation.customer_id) || { name: 'Unknown Customer', email: null, phone: null, address: null, city: null, country: null },
           quotation_items: itemsMap.get(quotation.id) || []
         }));
 
+        return fetchAll ? enrichedQuotations : { data: enrichedQuotations, total: count || 0 };
+
       } catch (error) {
-        const errorDetails = error instanceof Error
-          ? { message: error.message, stack: error.stack }
-          : (error as any)?.message
-          ? { message: (error as any).message }
-          : { details: String(error) };
-
-        console.error('Error in useQuotations:', {
-          ...errorDetails,
-          code: (error as any)?.code,
-          status: (error as any)?.status,
-          details: error
-        });
-
         const errorMessage = typeof error === 'string' ? error :
                             (error as any)?.message ||
                             'Failed to load quotations';
@@ -2160,9 +2163,18 @@ export const useGenerateDocumentNumber = () => {
 };
 
 // Delivery Notes hooks
-export const useDeliveryNotes = (companyId?: string) => {
+export const useDeliveryNotes = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string }
+) => {
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['delivery_notes', companyId],
+    queryKey: ['delivery_notes', companyId, page, pageSize, search],
     queryFn: async () => {
       let query = supabase
         .from('delivery_notes')
@@ -2171,17 +2183,22 @@ export const useDeliveryNotes = (companyId?: string) => {
           customers:customers!customer_id(name, email, phone, address, city, country),
           invoices:invoices!invoice_id(invoice_number, total_amount),
           delivery_note_items(*, products(name, unit_of_measure))
-        `)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (companyId) {
         query = query.eq('company_id', companyId);
       }
 
-      const { data, error } = await query;
+      if (search) {
+        query = query.or(`delivery_note_number.ilike.%${search}%,delivery_number.ilike.%${search}%,tracking_number.ilike.%${search}%,customers.name.ilike.%${search}%`);
+      }
+
+      query = query.range(from, to);
+      const { data, error, count } = await query;
 
       if (error) throw error;
-      return data;
+      return { data: data || [], total: count || 0 };
     },
   });
 };
@@ -2309,9 +2326,19 @@ export const useDashboardStats = (companyId?: string, month?: number, year?: num
 
 // ============= LPO Hooks =============
 
-export const useLPOs = (companyId?: string) => {
+export const useLPOs = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['lpos', companyId],
+    queryKey: ['lpos', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
       let query = supabase
         .from('lpos')
@@ -2319,17 +2346,24 @@ export const useLPOs = (companyId?: string) => {
           *,
           suppliers:customers!supplier_id(name, email, phone, address, city, country),
           lpo_items(*, products(name, product_code, unit_of_measure))
-        `)
+        `, { count: fetchAll ? undefined : 'exact' })
         .order('created_at', { ascending: false });
 
       if (companyId) {
         query = query.eq('company_id', companyId);
       }
 
-      const { data, error } = await query;
+      if (search) {
+        query = query.or(`lpo_number.ilike.%${search}%,notes.ilike.%${search}%,customers.name.ilike.%${search}%`);
+      }
+
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
+      const { data, error, count } = await query;
 
       if (error) throw error;
-      return data;
+      return fetchAll ? { data: data || [], total: (data || []).length } : { data: data || [], total: count || 0 };
     },
     enabled: !!companyId,
   });

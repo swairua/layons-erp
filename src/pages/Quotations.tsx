@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Table,
   TableBody,
@@ -81,7 +81,6 @@ function getStatusColor(status: string) {
 
 export default function Quotations() {
   const [searchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -94,7 +93,16 @@ export default function Quotations() {
   const { profile, loading: authLoading } = useAuth();
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: quotations, isLoading, error, refetch } = useQuotations(currentCompany?.id);
+
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: quotationData, isLoading, error, refetch } = useQuotations(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const quotations = quotationData?.data || [];
+  const totalQuotations = quotationData?.total || 0;
   const deleteQuotation = useDeleteQuotation();
 
   // Set status filter from URL params
@@ -144,19 +152,10 @@ export default function Quotations() {
     }).format(amount);
   };
 
-  const filteredQuotations = quotations?.filter(quotation => {
-    const matchesSearch =
-      quotation.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quotation.quotation_number.toLowerCase().includes(searchTerm.toLowerCase());
-
+  const filteredQuotations = quotations.filter(quotation => {
     const matchesStatus = statusFilter === 'all' || quotation.status === statusFilter;
-
-    return matchesSearch && matchesStatus;
-  }) || [];
-
-  // Pagination hook
-  const pagination = usePagination(filteredQuotations, { initialPageSize: 10 });
-  const paginatedQuotations = pagination.paginatedItems;
+    return matchesStatus;
+  });
 
   const handleCreateSuccess = () => {
     refetch();
@@ -382,8 +381,8 @@ Website: www.biolegendscientific.co.ke`;
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search quotations..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={pagination.debouncedSearch}
+                onChange={(e) => pagination.setSearch(e.target.value)}
                 className="pl-10 text-sm"
               />
             </div>
@@ -450,12 +449,12 @@ Website: www.biolegendscientific.co.ke`;
               <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No quotations found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm 
+                {pagination.debouncedSearch 
                   ? 'Try adjusting your search criteria'
                   : 'Get started by creating your first quotation'
                 }
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button 
                   onClick={() => setShowCreateModal(true)}
                   className="gradient-primary text-primary-foreground hover:opacity-90"
@@ -480,7 +479,7 @@ Website: www.biolegendscientific.co.ke`;
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedQuotations.map((quotation: Quotation) => (
+                  {filteredQuotations.map((quotation: Quotation) => (
                     <TableRow key={quotation.id} className="hover:bg-muted/50 transition-smooth">
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
@@ -587,11 +586,11 @@ Website: www.biolegendscientific.co.ke`;
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalQuotations / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalQuotations}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

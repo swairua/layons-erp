@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Table,
   TableBody,
@@ -126,7 +126,6 @@ function formatCurrency(amount: number, currency: string = 'KES') {
 
 export default function Payments() {
   const [searchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState('');
   const [methodFilter, setMethodFilter] = useState<string>('all');
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -148,7 +147,16 @@ export default function Payments() {
   // Fetch live payments data and company details
   const { data: companies = [] } = useCompanies();
   const currentCompany = companies.length > 0 ? companies[0] : undefined;
-  const { data: payments = [], isLoading, error } = usePayments(currentCompany?.id);
+
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: paymentData, isLoading, error } = usePayments(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const payments = paymentData?.data || [];
+  const totalPayments = paymentData?.total || 0;
   const { data: invoices = [] } = useInvoices(currentCompany?.id);
   const deletePayment = useDeletePayment();
 
@@ -287,11 +295,6 @@ export default function Payments() {
   });
 
   const filteredPayments = sortedPayments.filter(payment => {
-    const matchesSearch =
-      (payment.customers?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (payment.payment_number?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
-      (payment.payment_allocations?.some(alloc => alloc.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase())) ?? false);
-
     let matchesFilter = true;
     if (methodFilter === 'all') {
       matchesFilter = true;
@@ -305,12 +308,8 @@ export default function Payments() {
         : payment.payment_method === methodFilter;
     }
 
-    return matchesSearch && matchesFilter;
+    return matchesFilter;
   });
-
-  // Pagination hook
-  const pagination = usePagination(filteredPayments, { initialPageSize: 10 });
-  const paginatedPayments = pagination.paginatedItems;
 
   if (isLoading) {
     return (
@@ -504,8 +503,8 @@ export default function Payments() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search payments..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={pagination.debouncedSearch}
+                onChange={(e) => pagination.setSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -528,12 +527,12 @@ export default function Payments() {
               <DollarSign className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No payments found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm 
+                {pagination.debouncedSearch 
                   ? 'Try adjusting your search criteria'
                   : 'Record your first payment to get started'
                 }
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button onClick={handleRecordPayment}>
                   <Plus className="mr-2 h-4 w-4" />
                   Record Payment
@@ -562,7 +561,7 @@ export default function Payments() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedPayments.map((payment) => {
+                  {filteredPayments.map((payment) => {
                     const allocations = payment.payment_allocations || [];
                     const totalAllocated = allocations.reduce((sum, allocation) => sum + Number(allocation.allocated_amount || 0), 0);
                     const unallocatedAmount = Math.max(0, payment.amount - totalAllocated);
@@ -683,11 +682,11 @@ export default function Payments() {
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalPayments / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalPayments}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Table,
   TableBody,
@@ -46,27 +46,31 @@ export default function LPOs() {
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedLPO, setSelectedLPO] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [showCustomerSupplierAudit, setShowCustomerSupplierAudit] = useState(false);
   const [showAuditPanel, setShowAuditPanel] = useState(false);
 
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: lpos, isLoading, error, refetch } = useLPOs(currentCompany?.id);
+
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: lpoData, isLoading, error, refetch } = useLPOs(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const lpos = lpoData?.data || [];
+  const totalLPOs = lpoData?.total || 0;
   const updateLPO = useUpdateLPO();
 
   // Note: Auto-migration removed - using manual migration guide instead
 
-  const filteredLPOs = lpos?.filter(lpo =>
-    lpo.lpo_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lpo.suppliers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lpo.notes?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
-
-  // Pagination hook
-  const pagination = usePagination(filteredLPOs, { initialPageSize: 10 });
-  const paginatedLPOs = pagination.paginatedItems;
+  // Calculate stats (from current page only - total is server-side)
+  const draftLPOs = lpos.filter(lpo => lpo.status === 'draft').length;
+  const sentLPOs = lpos.filter(lpo => lpo.status === 'sent').length;
+  const approvedLPOs = lpos.filter(lpo => lpo.status === 'approved').length;
+  const receivedLPOs = lpos.filter(lpo => lpo.status === 'received').length;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -179,13 +183,6 @@ export default function LPOs() {
     setSelectedLPO(null);
     toast.success('Local Purchase Order updated successfully!');
   };
-
-  // Calculate stats
-  const totalLPOs = lpos?.length || 0;
-  const draftLPOs = lpos?.filter(lpo => lpo.status === 'draft').length || 0;
-  const sentLPOs = lpos?.filter(lpo => lpo.status === 'sent').length || 0;
-  const approvedLPOs = lpos?.filter(lpo => lpo.status === 'approved').length || 0;
-  const receivedLPOs = lpos?.filter(lpo => lpo.status === 'received').length || 0;
 
   // Handle error state
   if (error) {
@@ -338,8 +335,8 @@ export default function LPOs() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search LPOs..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={pagination.debouncedSearch}
+                  onChange={(e) => pagination.setSearch(e.target.value)}
                   className="pl-10 w-64"
                 />
               </div>
@@ -380,14 +377,14 @@ export default function LPOs() {
                 </div>
               ))}
             </div>
-          ) : filteredLPOs.length === 0 ? (
+          ) : lpos.length === 0 ? (
             <div className="text-center py-8">
               <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No purchase orders found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm ? 'No LPOs match your search.' : 'Create your first Local Purchase Order to get started.'}
+                {pagination.debouncedSearch ? 'No LPOs match your search.' : 'Create your first Local Purchase Order to get started.'}
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create LPO
@@ -409,7 +406,7 @@ export default function LPOs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedLPOs.map((lpo) => (
+                  {lpos.map((lpo) => (
                     <TableRow key={lpo.id}>
                       <TableCell className="font-medium">
                         {lpo.lpo_number}
@@ -493,11 +490,11 @@ export default function LPOs() {
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalLPOs / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalLPOs}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { 
   Table, 
   TableBody, 
@@ -76,7 +76,6 @@ function getStatusColor(status: InventoryItem['status']) {
 }
 
 export default function Inventory() {
-  const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -87,7 +86,16 @@ export default function Inventory() {
   // Fetch products from database
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: products, isLoading: loadingProducts, error: productsError } = useProducts(currentCompany?.id);
+
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: productsData, isLoading: loadingProducts, error: productsError } = useProducts(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const products = productsData?.data || [];
+  const totalProducts = productsData?.total || 0;
 
   const handleAddItem = () => {
     setShowAddModal(true);
@@ -137,20 +145,10 @@ export default function Inventory() {
   };
 
   // Transform products data to inventory items
-  const inventory: InventoryItem[] = products?.map(product => ({
+  const inventory: InventoryItem[] = products.map(product => ({
     ...product,
     status: getStockStatus(product.stock_quantity || 0, product.minimum_stock_level || 0)
-  })) || [];
-
-  const filteredInventory = inventory.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.product_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.product_categories?.name && item.product_categories.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // Pagination hook
-  const pagination = usePagination(filteredInventory, { initialPageSize: 10 });
-  const paginatedInventory = pagination.paginatedItems;
+  }));
 
   const totalValue = inventory.reduce((sum, item) => {
     return sum + ((item.stock_quantity || 0) * (item.selling_price || 0));
@@ -280,8 +278,8 @@ export default function Inventory() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search inventory..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={pagination.debouncedSearch}
+                onChange={(e) => pagination.setSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -314,15 +312,15 @@ export default function Inventory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInventory.length === 0 ? (
+              {inventory.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex flex-col items-center space-y-2">
                       <Package className="h-12 w-12 text-muted-foreground" />
                       <p className="text-muted-foreground">
-                        {searchTerm ? 'No products found matching your search.' : 'No products in inventory yet.'}
+                        {pagination.debouncedSearch ? 'No products found matching your search.' : 'No products in inventory yet.'}
                       </p>
-                      {!searchTerm && (
+                      {!pagination.debouncedSearch && (
                         <Button onClick={handleAddItem} className="mt-2">
                           <Plus className="h-4 w-4 mr-2" />
                           Add Your First Product
@@ -332,7 +330,7 @@ export default function Inventory() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedInventory.map((item) => (
+                inventory.map((item) => (
                   <TableRow key={item.id} className="hover:bg-muted/50">
                     <TableCell className="font-medium">{item.product_code}</TableCell>
                     <TableCell className="font-medium">{item.name}</TableCell>
@@ -384,13 +382,13 @@ export default function Inventory() {
               )}
             </TableBody>
           </Table>
-          {filteredInventory.length > 0 && (
+          {inventory.length > 0 && (
             <PaginationControls
-              currentPage={pagination.currentPage}
-              totalPages={pagination.totalPages}
+              currentPage={pagination.page}
+              totalPages={Math.ceil(totalProducts / pagination.pageSize)}
               pageSize={pagination.pageSize}
-              totalItems={pagination.totalItems}
-              onPageChange={pagination.setCurrentPage}
+              totalItems={totalProducts}
+              onPageChange={pagination.setPage}
               onPageSizeChange={pagination.setPageSize}
               pageSizeOptions={[10, 25, 50, 100]}
             />

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Select,
   SelectContent,
@@ -68,7 +68,6 @@ function getStatusColor(status: string) {
 }
 
 export default function CreditNotes() {
-  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -79,42 +78,33 @@ export default function CreditNotes() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFromFilter, setDateFromFilter] = useState('');
   const [dateToFilter, setDateToFilter] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('all');
   const [amountFromFilter, setAmountFromFilter] = useState('');
   const [amountToFilter, setAmountToFilter] = useState('');
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: creditNotes, isLoading, error, refetch } = useCreditNotes(currentCompany?.id);
+
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: cnData, isLoading, error, refetch } = useCreditNotes(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const creditNotes = cnData?.data || [];
+  const totalCreditNotes = cnData?.total || 0;
   const downloadPDF = useCreditNotePDFDownload();
 
-  // Filter and search logic
-  const filteredCreditNotes = creditNotes?.filter(creditNote => {
-    // Search filter
-    const matchesSearch =
-      creditNote.credit_note_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.customers?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      creditNote.reason?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Status filter
+  // Client-side filters for status/date/amount (applied on server-filtered results)
+  const filteredCreditNotes = creditNotes.filter(creditNote => {
     const matchesStatus = statusFilter === 'all' || creditNote.status === statusFilter;
-
-    // Date filter
     const creditNoteDate = new Date(creditNote.credit_note_date);
     const matchesDateFrom = !dateFromFilter || creditNoteDate >= new Date(dateFromFilter);
     const matchesDateTo = !dateToFilter || creditNoteDate <= new Date(dateToFilter);
-
-    // Amount filter
     const matchesAmountFrom = !amountFromFilter || (creditNote.total_amount || 0) >= parseFloat(amountFromFilter);
     const matchesAmountTo = !amountToFilter || (creditNote.total_amount || 0) <= parseFloat(amountToFilter);
-
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
-  }) || [];
-
-  // Pagination hook
-  const pagination = usePagination(filteredCreditNotes, { initialPageSize: 10 });
-  const paginatedCreditNotes = pagination.paginatedItems;
+    return matchesStatus && matchesDateFrom && matchesDateTo && matchesAmountFrom && matchesAmountTo;
+  });
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
@@ -134,10 +124,9 @@ export default function CreditNotes() {
     setStatusFilter('all');
     setDateFromFilter('');
     setDateToFilter('');
-    setCustomerFilter('all');
     setAmountFromFilter('');
     setAmountToFilter('');
-    setSearchTerm('');
+    pagination.setSearch('');
     toast.success('Filters cleared');
   };
 
@@ -246,8 +235,8 @@ export default function CreditNotes() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search credit notes by customer or number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={pagination.debouncedSearch}
+                onChange={(e) => pagination.setSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -342,7 +331,7 @@ export default function CreditNotes() {
             <span>Credit Notes List</span>
             {!isLoading && (
               <Badge variant="outline" className="ml-auto">
-                {filteredCreditNotes.length} credit notes
+                {totalCreditNotes} credit notes
               </Badge>
             )}
           </CardTitle>
@@ -368,12 +357,12 @@ export default function CreditNotes() {
               <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No credit notes found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm 
+                {pagination.debouncedSearch 
                   ? 'Try adjusting your search criteria'
                   : 'Get started by creating your first credit note'
                 }
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button
                   onClick={() => setShowCreateModal(true)}
                   className="gradient-primary text-primary-foreground hover:opacity-90"
@@ -400,7 +389,7 @@ export default function CreditNotes() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedCreditNotes.map((creditNote: CreditNote) => (
+                  {filteredCreditNotes.map((creditNote: CreditNote) => (
                     <TableRow key={creditNote.id} className="hover:bg-muted/50 transition-smooth">
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
@@ -495,11 +484,11 @@ export default function CreditNotes() {
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalCreditNotes / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalCreditNotes}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

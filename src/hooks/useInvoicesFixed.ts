@@ -4,26 +4,45 @@ import { supabase } from '@/integrations/supabase/client';
 /**
  * Fixed hook for fetching invoices with customer data
  * Uses separate queries to avoid relationship ambiguity
+ * Supports server-side pagination, search, and fetchAll mode
  */
-export const useInvoicesFixed = (companyId?: string) => {
+export const useInvoicesFixed = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['invoices_fixed', companyId],
+    queryKey: ['invoices_fixed', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
-      if (!companyId) return [];
+      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
 
       try {
         console.log('Fetching invoices for company:', companyId);
 
-        // Check authentication status
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          console.warn('No active session - user may not be authenticated');
           throw new Error('Authentication required: No active session');
         }
-        console.log('✅ Session verified for user:', session.user?.email);
 
-        // Step 1: Get invoices without embedded relationships
-        // Note: Use paid_amount and balance_due as per the database schema
+        // If searching by customer name, first find matching customer IDs
+        let matchingCustomerIds: string[] | null = null;
+        if (search) {
+          const { data: matchedCustomers } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('company_id', companyId)
+            .or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+          matchingCustomerIds = (matchedCustomers || []).map(c => c.id);
+          // If no customers match, still try invoice_number search
+        }
+
+        // Step 1: Get invoices with pagination
         let query = supabase
           .from('invoices')
           .select(`
@@ -44,217 +63,113 @@ export const useInvoicesFixed = (companyId?: string) => {
             lpo_number,
             created_at,
             updated_at
-          `)
+          `, { count: fetchAll ? undefined : 'exact' })
           .eq('company_id', companyId)
           .order('created_at', { ascending: false });
 
-        const { data: invoices, error: invoicesError } = await query;
+        if (search) {
+          if (matchingCustomerIds && matchingCustomerIds.length > 0) {
+            query = query.or(`invoice_number.ilike.%${search}%,customer_id.in.(${matchingCustomerIds.join(',')})`);
+          } else {
+            query = query.ilike('invoice_number', `%${search}%`);
+          }
+        }
+
+        if (!fetchAll) {
+          query = query.range(from, to);
+        }
+
+        const { data: invoices, error: invoicesError, count } = await query;
 
         if (invoicesError) {
-          const errorMsg = invoicesError?.message || JSON.stringify(invoicesError);
-          console.error('Error fetching invoices from Supabase:', {
-            message: errorMsg,
-            code: (invoicesError as any)?.code,
-            status: (invoicesError as any)?.status,
-            fullError: invoicesError
-          });
-          throw new Error(`Failed to fetch invoices: ${errorMsg}`);
+          throw new Error(`Failed to fetch invoices: ${invoicesError.message}`);
         }
-
-        console.log('Invoices fetched successfully:', invoices?.length || 0);
 
         if (!invoices || invoices.length === 0) {
-          return [];
+          return fetchAll ? [] : { data: [], total: count || 0 };
         }
 
-        // Step 2: Get unique customer IDs (filter out invalid UUIDs)
+        // Step 2: Get unique customer IDs
         const customerIds = [...new Set(invoices.map(invoice => invoice.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
-        console.log('Fetching customer data for IDs:', customerIds.length);
 
-        // Step 3: Get customers separately
-        const { data: customers, error: customersError } = customerIds.length > 0 ? await supabase
+        // Step 3: Get customers
+        const { data: customers } = customerIds.length > 0 ? await supabase
           .from('customers')
           .select('id, name, email, phone, address, city, country')
           .in('id', customerIds) : { data: [], error: null };
 
-        if (customersError) {
-          console.error('Error fetching customers (non-fatal):', customersError);
-          // Don't throw here, just continue without customer data
-        }
-
-        console.log('Customers fetched:', customers?.length || 0);
-
-        // Step 4: Create customer lookup map
         const customerMap = new Map();
         (customers || []).forEach(customer => {
           customerMap.set(customer.id, customer);
         });
 
         // Step 4a: Get company details
-        const { data: company, error: companyError } = await supabase
+        const { data: company } = await supabase
           .from('companies')
           .select('id, name, address, city, country, phone, email, tax_number')
           .eq('id', companyId)
           .single();
 
-        if (companyError) {
-          console.error('Error fetching company (non-fatal):', companyError);
-        }
-
-        // Step 5: Get invoice items for each invoice
+        // Step 5: Get invoice items for paginated invoices only
         const invoiceIds = invoices.map(inv => inv.id).filter(id => id && typeof id === 'string');
-
-        // Helper to retry a Supabase query in case of transient network errors
-        async function queryInvoiceItemsWithRetry(ids: string[], attempts = 3, delayMs = 500) {
-          // Validate input before attempting query
-          if (!ids || ids.length === 0) {
-            console.log('No invoice IDs to fetch items for');
-            return { data: [], error: null };
-          }
-
-          for (let attempt = 1; attempt <= attempts; attempt++) {
-            try {
-              console.log(`Fetching invoice items - attempt ${attempt}/${attempts} for ${ids.length} invoices`);
-              const res = await supabase
-                .from('invoice_items')
-                .select(`
-                  id,
-                  invoice_id,
-                  product_id,
-                  description,
-                  quantity,
-                  unit_price,
-                  discount_percentage,
-                  discount_before_vat,
-                  tax_percentage,
-                  tax_amount,
-                  tax_inclusive,
-                  line_total,
-                  sort_order,
-                  section_name,
-                  section_labor_cost,
-                  unit_of_measure,
-                  products(id, name, product_code, unit_of_measure)
-                `)
-                .in('invoice_id', ids);
-
-              if (res.error) {
-                console.warn(`Attempt ${attempt} returned error:`, res.error);
-                if (attempt < attempts) {
-                  await new Promise(r => setTimeout(r, delayMs * attempt));
-                  continue;
-                }
-              }
-              return res;
-            } catch (err) {
-              console.warn(`Attempt ${attempt} to fetch invoice_items failed with exception:`, err);
-              if (attempt < attempts) {
-                // small backoff before retrying
-                await new Promise(r => setTimeout(r, delayMs * attempt));
-                continue;
-              }
-              // On last attempt, return with no data instead of throwing
-              console.error(`Failed to fetch invoice items after ${attempts} attempts:`, err);
-              return { data: [], error: err };
-            }
-          }
-          return { data: [], error: null };
-        }
 
         let invoiceItems = [] as any[];
         try {
           if (invoiceIds.length > 0) {
-            const { data, error } = await queryInvoiceItemsWithRetry(invoiceIds, 3, 500);
-            if (error) {
-              console.error('Error fetching invoice items (non-fatal):', (error as any)?.message || error);
-            } else if (data && data.length > 0) {
-              invoiceItems = data;
-              console.log('✅ Invoice items fetched:', invoiceItems.length);
-            } else if (data) {
-              console.log('No invoice items found for these invoices');
-            }
-          } else {
-            console.log('No valid invoice IDs to fetch items for');
+            const { data, error } = await supabase
+              .from('invoice_items')
+              .select(`
+                id, invoice_id, product_id, description, quantity, unit_price,
+                discount_percentage, discount_before_vat, tax_percentage, tax_amount,
+                tax_inclusive, line_total, sort_order, section_name, section_labor_cost,
+                unit_of_measure, products(id, name, product_code, unit_of_measure)
+              `)
+              .in('invoice_id', invoiceIds);
+            if (!error && data) invoiceItems = data;
           }
         } catch (err) {
-          console.error('Unexpected error fetching invoice items (non-fatal):', err);
-          // Leave invoiceItems as empty array so invoices still load
+          console.error('Error fetching invoice items (non-fatal):', err);
         }
 
-        // Step 6: Group invoice items by invoice_id
         const itemsMap = new Map();
         (invoiceItems || []).forEach(item => {
-          if (!itemsMap.has(item.invoice_id)) {
-            itemsMap.set(item.invoice_id, []);
-          }
+          if (!itemsMap.has(item.invoice_id)) itemsMap.set(item.invoice_id, []);
           itemsMap.get(item.invoice_id).push(item);
         });
 
-        // Step 6a: Fetch payment allocations for each invoice
+        // Step 6a: Fetch payment allocations
         let paymentAllocations = [] as any[];
         try {
           if (invoiceIds.length > 0) {
             const { data, error } = await supabase
               .from('payment_allocations')
               .select(`
-                id,
-                invoice_id,
-                payment_id,
-                amount_allocated,
-                payments(
-                  id,
-                  payment_number,
-                  payment_date,
-                  amount,
-                  payment_method,
-                  reference_number
-                )
+                id, invoice_id, payment_id, amount_allocated,
+                payments(id, payment_number, payment_date, amount, payment_method, reference_number)
               `)
               .in('invoice_id', invoiceIds);
-
-            if (error) {
-              console.error('Error fetching payment allocations (non-fatal):', (error as any)?.message || error);
-            } else if (data) {
-              paymentAllocations = data;
-              console.log('✅ Payment allocations fetched:', paymentAllocations.length);
-            }
+            if (!error && data) paymentAllocations = data;
           }
         } catch (err) {
-          console.error('Unexpected error fetching payment allocations (non-fatal):', err);
+          console.error('Error fetching payment allocations (non-fatal):', err);
         }
 
-        // Group payment allocations by invoice_id
         const allocationsMap = new Map();
         (paymentAllocations || []).forEach(alloc => {
-          if (!allocationsMap.has(alloc.invoice_id)) {
-            allocationsMap.set(alloc.invoice_id, []);
-          }
+          if (!allocationsMap.has(alloc.invoice_id)) allocationsMap.set(alloc.invoice_id, []);
           allocationsMap.get(alloc.invoice_id).push(alloc);
         });
 
-        // Step 7: Combine data with enriched information
+        // Step 7: Combine data
         const enrichedInvoices = invoices.map(invoice => ({
           ...invoice,
-          customers: customerMap.get(invoice.customer_id) || {
-            name: 'Unknown Customer',
-            email: null,
-            phone: null
-          },
+          customers: customerMap.get(invoice.customer_id) || { name: 'Unknown Customer', email: null, phone: null },
           company: company || null,
           invoice_items: itemsMap.get(invoice.id) || [],
           payment_allocations: allocationsMap.get(invoice.id) || []
         }));
 
-        console.log('✅ Invoices enriched successfully:', enrichedInvoices.length);
-        enrichedInvoices.forEach(inv => {
-          console.log(`  📦 Invoice ${inv.invoice_number}:`, {
-            id: inv.id,
-            idType: typeof inv.id,
-            idLength: inv.id?.length,
-            items: inv.invoice_items.length
-          });
-        });
-        return enrichedInvoices;
+        return fetchAll ? enrichedInvoices : { data: enrichedInvoices, total: count || 0 };
 
       } catch (error) {
         console.error('Error in useInvoicesFixed:', error);
@@ -262,7 +177,7 @@ export const useInvoicesFixed = (companyId?: string) => {
       }
     },
     enabled: !!companyId,
-    staleTime: 30000, // Cache for 30 seconds
+    staleTime: 30000,
     retry: 3,
     retryDelay: 1000,
   });

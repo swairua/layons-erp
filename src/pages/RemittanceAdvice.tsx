@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { 
   Select,
   SelectContent,
@@ -33,7 +33,6 @@ import { EditRemittanceModal } from '@/components/remittance/EditRemittanceModal
 // Remittance advice page - uses real database data via useRemittanceAdvice hook
 
 const RemittanceAdvice = () => {
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -41,7 +40,15 @@ const RemittanceAdvice = () => {
   const [selectedRemittance, setSelectedRemittance] = useState<any>(null);
 
   // Fetch live remittance advice data and company details
-  const { data: remittances = [], isLoading, error } = useRemittanceAdvice();
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: remData, isLoading, error } = useRemittanceAdvice(undefined, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const remittances = remData?.data || [];
+  const totalRemittances = remData?.total || 0;
   const { data: companies = [] } = useCompanies();
 
   // Get the current company (assuming first company for now)
@@ -101,15 +108,9 @@ const RemittanceAdvice = () => {
   };
 
   const filteredRemittances = remittances.filter(remittance => {
-    const matchesSearch = (remittance.customers?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (remittance.advice_number || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || remittance.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
-
-  // Pagination hook
-  const pagination = usePagination(filteredRemittances, { initialPageSize: 10 });
-  const paginatedRemittances = pagination.paginatedItems;
 
   if (isLoading) {
     return (
@@ -182,8 +183,8 @@ const RemittanceAdvice = () => {
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search by customer name or advice number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={pagination.debouncedSearch}
+                  onChange={(e) => pagination.setSearch(e.target.value)}
                   className="pl-10"
                 />
               </div>
@@ -216,12 +217,12 @@ const RemittanceAdvice = () => {
               <CreditCard className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No remittance advice found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm || statusFilter !== 'all'
+                {pagination.debouncedSearch || statusFilter !== 'all'
                   ? 'Try adjusting your search criteria'
                   : 'Create your first remittance advice document'
                 }
               </p>
-              {!searchTerm && statusFilter === 'all' && (
+              {!pagination.debouncedSearch && statusFilter === 'all' && (
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="mr-2 h-4 w-4" />
                   Create Remittance Advice
@@ -243,7 +244,7 @@ const RemittanceAdvice = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedRemittances.map((remittance) => (
+                  {filteredRemittances.map((remittance) => (
                     <TableRow key={remittance.id} className="hover:bg-muted/50 transition-smooth">
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
@@ -314,11 +315,11 @@ const RemittanceAdvice = () => {
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalRemittances / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalRemittances}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />
@@ -328,12 +329,12 @@ const RemittanceAdvice = () => {
       </Card>
 
       {/* Latest Remittance Advice Preview */}
-      {paginatedRemittances.length > 0 && paginatedRemittances[0] && (
+      {filteredRemittances.length > 0 && filteredRemittances[0] && (
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Building2 className="h-5 w-5 text-primary" />
-              <span>Remittance Advice Preview - {paginatedRemittances[0].adviceNumber || paginatedRemittances[0].advice_number || 'N/A'}</span>
+              <span>Remittance Advice Preview - {filteredRemittances[0].adviceNumber || filteredRemittances[0].advice_number || 'N/A'}</span>
             </CardTitle>
             <CardDescription>
               Latest remittance advice document layout
@@ -364,7 +365,7 @@ const RemittanceAdvice = () => {
                 <div>
                   <div className="font-semibold text-sm mb-2">TO:</div>
                   <div className="space-y-1">
-                    <div className="font-medium">{paginatedRemittances[0].customerName || paginatedRemittances[0].customers?.name || 'N/A'}</div>
+                    <div className="font-medium">{filteredRemittances[0].customerName || filteredRemittances[0].customers?.name || 'N/A'}</div>
                     <div className="text-sm text-muted-foreground">
                       {filteredRemittances[0].customerAddress || filteredRemittances[0].customers?.address || 'N/A'}
                     </div>

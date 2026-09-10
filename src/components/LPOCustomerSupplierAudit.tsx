@@ -50,8 +50,8 @@ export const LPOCustomerSupplierAudit = () => {
   const [showDetails, setShowDetails] = useState(false);
 
   const companyId = useCurrentCompanyId();
-  const { data: lpos } = useLPOs(companyId);
-  const { data: customers } = useCustomers(companyId);
+  const { data: lpos } = useLPOs(companyId, { fetchAll: true });
+  const { data: customers } = useCustomers(companyId, { fetchAll: true });
   const { data: invoices } = useInvoicesFixed(companyId);
 
   const performAudit = () => {

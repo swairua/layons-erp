@@ -53,13 +53,23 @@ export interface ProformaWithItems extends ProformaInvoice {
 /**
  * Hook to fetch proforma invoices for a company
  */
-export const useProformas = (companyId?: string) => {
-  return useQuery({
-    queryKey: ['proforma_invoices', companyId],
-    queryFn: async () => {
-      if (!companyId) return [];
+export const useProformas = (
+  companyId?: string,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) => {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-      const { data, error } = await supabase
+  return useQuery({
+    queryKey: ['proforma_invoices', companyId, fetchAll ? 'all' : page, pageSize, search],
+    queryFn: async () => {
+      if (!companyId) return fetchAll ? { data: [], total: 0 } : { data: [], total: 0 };
+
+      let query = supabase
         .from('proforma_invoices')
         .select(`
           *,
@@ -76,9 +86,19 @@ export const useProformas = (companyId?: string) => {
               name
             )
           )
-        `)
+        `, { count: fetchAll ? undefined : 'exact' })
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
+
+      if (search) {
+        query = query.or(`proforma_number.ilike.%${search}%,customers.name.ilike.%${search}%`);
+      }
+
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
+
+      const { data, error, count } = await query;
 
       if (error) {
         console.error('Error fetching proformas:', error);
@@ -86,7 +106,7 @@ export const useProformas = (companyId?: string) => {
       }
 
       // Map product names to items for compatibility
-      const proformasWithProductNames = data?.map(proforma => ({
+      const proformasWithProductNames = (data || []).map(proforma => ({
         ...proforma,
         proforma_items: proforma.proforma_items?.map(item => ({
           ...item,
@@ -94,7 +114,9 @@ export const useProformas = (companyId?: string) => {
         }))
       }));
 
-      return proformasWithProductNames as ProformaWithItems[];
+      return fetchAll
+        ? { data: proformasWithProductNames as ProformaWithItems[], total: (data || []).length }
+        : { data: proformasWithProductNames as ProformaWithItems[], total: count || 0 };
     },
     enabled: !!companyId,
   });

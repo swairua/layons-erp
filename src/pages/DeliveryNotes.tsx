@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Table,
   TableBody,
@@ -42,25 +42,22 @@ export default function DeliveryNotes() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedDeliveryNote, setSelectedDeliveryNote] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   // Database hooks
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: deliveryNotes, isLoading, error } = useDeliveryNotes(currentCompany?.id);
+
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: dnData, isLoading, error } = useDeliveryNotes(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+  });
+  const deliveryNotes = dnData?.data || [];
+  const totalDeliveryNotes = dnData?.total || 0;
   const updateDeliveryNote = useUpdateDeliveryNote();
 
-  const mappedDeliveryNotes = deliveryNotes?.map(mapDeliveryNoteForDisplay) || [];
-
-  const filteredDeliveryNotes = mappedDeliveryNotes.filter(note =>
-    (note.delivery_note_number || note.delivery_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    note.tracking_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Pagination hook
-  const pagination = usePagination(filteredDeliveryNotes, { initialPageSize: 10 });
-  const paginatedDeliveryNotes = pagination.paginatedItems;
+  const mappedDeliveryNotes = deliveryNotes.map(mapDeliveryNoteForDisplay);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -160,11 +157,10 @@ export default function DeliveryNotes() {
     toast.success('Delivery note created successfully!');
   };
 
-  // Calculate stats
-  const totalDeliveryNotes = deliveryNotes?.length || 0;
-  const inTransit = deliveryNotes?.filter(note => note.status === 'sent').length || 0;
-  const delivered = deliveryNotes?.filter(note => note.status === 'approved').length || 0;
-  const prepared = deliveryNotes?.filter(note => note.status === 'draft').length || 0;
+  // Calculate stats (from server total, not filtered)
+  const inTransit = deliveryNotes.filter(note => note.status === 'sent').length;
+  const delivered = deliveryNotes.filter(note => note.status === 'approved').length;
+  const prepared = deliveryNotes.filter(note => note.status === 'draft').length;
 
   // Handle error state
   if (error) {
@@ -276,8 +272,8 @@ export default function DeliveryNotes() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search delivery notes..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={pagination.debouncedSearch}
+                  onChange={(e) => pagination.setSearch(e.target.value)}
                   className="pl-10 w-64"
                 />
               </div>
@@ -301,14 +297,14 @@ export default function DeliveryNotes() {
                 </div>
               ))}
             </div>
-          ) : filteredDeliveryNotes.length === 0 ? (
+          ) : mappedDeliveryNotes.length === 0 ? (
             <div className="text-center py-8">
               <Truck className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold mb-2">No delivery notes found</h3>
               <p className="text-muted-foreground mb-4">
-                {searchTerm ? 'No delivery notes match your search.' : 'Create your first delivery note to get started.'}
+                {pagination.debouncedSearch ? 'No delivery notes match your search.' : 'Create your first delivery note to get started.'}
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button onClick={() => setShowCreateModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Delivery Note
@@ -330,7 +326,7 @@ export default function DeliveryNotes() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedDeliveryNotes.map((note) => (
+                  {mappedDeliveryNotes.map((note) => (
                     <TableRow key={note.id}>
                       <TableCell className="font-medium">
                         {note.delivery_note_number || note.delivery_number}
@@ -416,11 +412,11 @@ export default function DeliveryNotes() {
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalDeliveryNotes / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalDeliveryNotes}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

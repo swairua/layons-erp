@@ -69,13 +69,23 @@ export interface CreditNoteAllocation {
 }
 
 // Fetch all credit notes for a company
-export function useCreditNotes(companyId: string | undefined) {
+export function useCreditNotes(
+  companyId: string | undefined,
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
+) {
+  const fetchAll = options?.fetchAll ?? true;
+  const page = options?.page ?? 1;
+  const pageSize = options?.pageSize ?? 10;
+  const search = options?.search ?? '';
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
   return useQuery({
-    queryKey: ['creditNotes', companyId],
+    queryKey: ['creditNotes', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
       if (!companyId) throw new Error('Company ID is required');
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('credit_notes')
         .select(`
           *,
@@ -97,12 +107,23 @@ export function useCreditNotes(companyId: string | undefined) {
             invoice_number,
             total_amount
           )
-        `)
+        `, { count: fetchAll ? undefined : 'exact' })
         .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
+      if (search) {
+        query = query.or(`credit_note_number.ilike.%${search}%,reason.ilike.%${search}%,customers.name.ilike.%${search}%,customers.email.ilike.%${search}%`);
+      }
+
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
+      const { data, error, count } = await query;
+
       if (error) throw error;
-      return data as CreditNote[];
+      return fetchAll
+        ? { data: (data as CreditNote[]) || [], total: (data || []).length }
+        : { data: (data as CreditNote[]) || [], total: count || 0 };
     },
     enabled: !!companyId,
   });

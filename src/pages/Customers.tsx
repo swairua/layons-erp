@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Select,
   SelectContent,
@@ -73,7 +73,6 @@ function getStatusColor(isActive: boolean) {
 }
 
 export default function Customers() {
-  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -87,36 +86,28 @@ export default function Customers() {
   
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: customers, isLoading, error } = useCustomers(currentCompany?.id);
 
-  // Filter and search logic
-  const filteredCustomers = customers?.filter(customer => {
-    // Search filter
-    const matchesSearch =
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.customer_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.toLowerCase().includes(searchTerm.toLowerCase());
+  const pagination = useServerPagination({ initialPageSize: 10 });
+  const { data: customersData, isLoading, error } = useCustomers(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const customers = customersData?.data || [];
+  const totalCustomers = customersData?.total || 0;
 
-    // Status filter
+  // Client-side filters for status/city/creditLimit (small dataset, applied on top of server results)
+  const filteredCustomers = customers.filter(customer => {
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'active' && customer.is_active !== false) ||
       (statusFilter === 'inactive' && customer.is_active === false);
-
-    // City filter
     const matchesCity = cityFilter === 'all' || customer.city === cityFilter;
-
-    // Credit limit filter
     const matchesCreditLimit = creditLimitFilter === 'all' ||
       (creditLimitFilter === 'no_limit' && !customer.credit_limit) ||
       (creditLimitFilter === 'with_limit' && customer.credit_limit);
-
-    return matchesSearch && matchesStatus && matchesCity && matchesCreditLimit;
-  }) || [];
-
-  // Pagination hook
-  const pagination = usePagination(filteredCustomers, { initialPageSize: 10 });
-  const paginatedCustomers = pagination.paginatedItems;
+    return matchesStatus && matchesCity && matchesCreditLimit;
+  });
 
   const displayCurrency = (amount: number) => {
     return formatCurrency(amount, currentCompany?.currency || 'KES');
@@ -223,7 +214,7 @@ export default function Customers() {
     setStatusFilter('all');
     setCityFilter('all');
     setCreditLimitFilter('all');
-    setSearchTerm('');
+    pagination.setSearch('');
     toast.success('Filters cleared');
   };
 
@@ -282,8 +273,8 @@ export default function Customers() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search customers by name, code, or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={pagination.debouncedSearch}
+                onChange={(e) => pagination.setSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
@@ -360,7 +351,7 @@ export default function Customers() {
             <span>Customers List</span>
             {!isLoading && (
               <Badge variant="outline" className="ml-auto">
-                {filteredCustomers.length} customers
+                {totalCustomers} customers
               </Badge>
             )}
           </CardTitle>
@@ -387,12 +378,12 @@ export default function Customers() {
               <Building2 className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No customers found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm 
+                {pagination.debouncedSearch 
                   ? 'Try adjusting your search criteria'
                   : 'Get started by adding your first customer'
                 }
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button
                   onClick={handleCreateCustomer}
                   className="gradient-primary text-primary-foreground hover:opacity-90"
@@ -535,11 +526,11 @@ export default function Customers() {
               </TableBody>
             </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalCustomers / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalCustomers}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />

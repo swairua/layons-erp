@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import {
   Select,
   SelectContent,
@@ -106,7 +106,6 @@ function getStatusColor(status: string) {
 
 export default function Invoices() {
   const [searchParams] = useSearchParams();
-  const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -125,7 +124,6 @@ export default function Invoices() {
   const [dateToFilter, setDateToFilter] = useState('');
   const [dueDateFromFilter, setDueDateFromFilter] = useState('');
   const [dueDateToFilter, setDueDateToFilter] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('all');
   const [amountFromFilter, setAmountFromFilter] = useState('');
   const [amountToFilter, setAmountToFilter] = useState('');
 
@@ -133,8 +131,17 @@ export default function Invoices() {
   const currentCompany = companies?.[0];
   const { logDelete } = useAuditLog();
 
-  // Use the fixed invoices hook
-  const { data: invoices, isLoading, error, refetch } = useInvoices(currentCompany?.id);
+  const pagination = useServerPagination({ initialPageSize: 10 });
+
+  // Use the fixed invoices hook with server-side pagination
+  const { data: invoicesData, isLoading, error, refetch } = useInvoices(currentCompany?.id, {
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    search: pagination.debouncedSearch,
+    fetchAll: false,
+  });
+  const invoices = invoicesData?.data || [];
+  const totalInvoices = invoicesData?.total || 0;
   const deleteInvoice = useDeleteInvoice();
 
   // Set dueStatus filter from URL params
@@ -232,14 +239,8 @@ export default function Invoices() {
     current: invoices?.filter(inv => categorizeInvoice(inv) === 'current').length || 0,
   };
 
-  // Filter and search logic
-  const filteredInvoices = invoices?.filter(invoice => {
-    // Search filter
-    const matchesSearch =
-      invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.customers?.email?.toLowerCase().includes(searchTerm.toLowerCase());
-
+  // Filter and search logic (status/date/amount filters are client-side on server-filtered results)
+  const filteredInvoices = invoices.filter(invoice => {
     // Status filter - use calculated status
     const calculatedStatus = calculateInvoiceStatus(invoice);
     const matchesStatus = statusFilter === 'all' || calculatedStatus === statusFilter;
@@ -262,12 +263,8 @@ export default function Invoices() {
     const matchesAmountFrom = !amountFromFilter || (invoice.total_amount || 0) >= parseFloat(amountFromFilter);
     const matchesAmountTo = !amountToFilter || (invoice.total_amount || 0) <= parseFloat(amountToFilter);
 
-    return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo && matchesDueDateFrom && matchesDueDateTo && matchesDueDateStatus && matchesAmountFrom && matchesAmountTo;
-  }) || [];
-
-  // Pagination hook
-  const pagination = usePagination(filteredInvoices, { initialPageSize: 10 });
-  const paginatedInvoices = pagination.paginatedItems;
+    return matchesStatus && matchesDateFrom && matchesDateTo && matchesDueDateFrom && matchesDueDateTo && matchesDueDateStatus && matchesAmountFrom && matchesAmountTo;
+  });
 
   const formatCurrency = (amount: number, currency: string = 'KES') => {
     const localeMap: { [key: string]: string } = {
@@ -624,8 +621,8 @@ Website:`;
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search invoices..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={pagination.debouncedSearch}
+                onChange={(e) => pagination.setSearch(e.target.value)}
                 className="pl-10 text-sm"
               />
             </div>
@@ -839,12 +836,12 @@ Website:`;
               <Receipt className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">No invoices found</h3>
               <p className="text-muted-foreground mb-6">
-                {searchTerm 
+                {pagination.debouncedSearch 
                   ? 'Try adjusting your search criteria'
                   : 'Get started by creating your first invoice'
                 }
               </p>
-              {!searchTerm && (
+              {!pagination.debouncedSearch && (
                 <Button
                   onClick={() => setShowCreateModal(true)}
                   className="gradient-primary text-primary-foreground hover:opacity-90"
@@ -872,7 +869,7 @@ Website:`;
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedInvoices.map((invoice: Invoice) => (
+                  {filteredInvoices.map((invoice: Invoice) => (
                     <>
                     <TableRow key={invoice.id} className="hover:bg-muted/50 transition-smooth">
                       <TableCell className="w-10">
@@ -1033,11 +1030,11 @@ Website:`;
                 </TableBody>
               </Table>
               <PaginationControls
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
+                currentPage={pagination.page}
+                totalPages={Math.ceil(totalInvoices / pagination.pageSize)}
                 pageSize={pagination.pageSize}
-                totalItems={pagination.totalItems}
-                onPageChange={pagination.setCurrentPage}
+                totalItems={totalInvoices}
+                onPageChange={pagination.setPage}
                 onPageSizeChange={pagination.setPageSize}
                 pageSizeOptions={[10, 25, 50, 100]}
               />
