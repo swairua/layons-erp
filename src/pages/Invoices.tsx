@@ -559,10 +559,9 @@ Website:`;
     setDateToFilter('');
     setDueDateFromFilter('');
     setDueDateToFilter('');
-    setCustomerFilter('all');
     setAmountFromFilter('');
     setAmountToFilter('');
-    setSearchTerm('');
+    pagination.setSearch('');
     toast.success('Filters cleared');
   };
 

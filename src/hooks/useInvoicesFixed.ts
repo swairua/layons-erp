@@ -20,7 +20,7 @@ export const useInvoicesFixed = (
   return useQuery({
     queryKey: ['invoices_fixed', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
-      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
+      if (!companyId) return { data: [], total: 0 };
 
       try {
         console.log('Fetching invoices for company:', companyId);
@@ -86,7 +86,7 @@ export const useInvoicesFixed = (
         }
 
         if (!invoices || invoices.length === 0) {
-          return fetchAll ? [] : { data: [], total: count || 0 };
+          return { data: [], total: count || 0 };
         }
 
         // Step 2: Get unique customer IDs
@@ -169,7 +169,7 @@ export const useInvoicesFixed = (
           payment_allocations: allocationsMap.get(invoice.id) || []
         }));
 
-        return fetchAll ? enrichedInvoices : { data: enrichedInvoices, total: count || 0 };
+        return { data: enrichedInvoices, total: count || 0 };
 
       } catch (error) {
         console.error('Error in useInvoicesFixed:', error);

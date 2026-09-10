@@ -49,6 +49,7 @@ export default function DeliveryNotes() {
 
   const pagination = useServerPagination({ initialPageSize: 10 });
   const { data: dnData, isLoading, error } = useDeliveryNotes(currentCompany?.id, {
+    fetchAll: false,
     page: pagination.page,
     pageSize: pagination.pageSize,
     search: pagination.debouncedSearch,

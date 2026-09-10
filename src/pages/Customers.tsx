@@ -408,7 +408,7 @@ export default function Customers() {
                   </TableRow>
                 </TableHeader>
               <TableBody>
-                {paginatedCustomers.map((customer: Customer) => (
+                {filteredCustomers.map((customer: Customer) => (
                   <TableRow key={customer.id} className="hover:bg-muted/50 transition-smooth">
                     <TableCell>
                       <div className="flex items-center space-x-3">

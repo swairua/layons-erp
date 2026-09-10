@@ -817,7 +817,7 @@ export const useInvoices = (
     queryKey: ['invoices', companyId, fetchAll ? 'all' : page, pageSize, search],
     enabled: !!companyId,
     queryFn: async () => {
-      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
+      if (!companyId) return { data: [], total: 0 };
 
       try {
         // If searching by customer name, first find matching customer IDs
@@ -872,7 +872,7 @@ export const useInvoices = (
 
         if (invoicesError) throw invoicesError;
         if (!invoices || invoices.length === 0) {
-          return fetchAll ? [] : { data: [], total: count || 0 };
+          return { data: [], total: count || 0 };
         }
 
         // Step 2: Get customers
@@ -919,7 +919,7 @@ export const useInvoices = (
           invoice_items: itemsMap.get(invoice.id) || []
         }));
 
-        return fetchAll ? enrichedInvoices : { data: enrichedInvoices, total: count || 0 };
+        return { data: enrichedInvoices, total: count || 0 };
 
       } catch (error) {
         console.error('Error in useInvoices:', error);
@@ -1085,7 +1085,7 @@ export const usePayments = (
   return useQuery({
     queryKey: ['payments', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
-      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
+      if (!companyId) return { data: [], total: 0 };
 
       try {
         // If searching by customer name, first find matching customer IDs
@@ -1127,7 +1127,7 @@ export const usePayments = (
 
         if (paymentsError) throw paymentsError;
         if (!payments || payments.length === 0) {
-          return fetchAll ? [] : { data: [], total: count || 0 };
+          return { data: [], total: count || 0 };
         }
 
         // Step 2: Get customers
@@ -1221,7 +1221,7 @@ export const usePayments = (
           payment_allocations: allocationsMap.get(payment.id) || []
         }));
 
-        return fetchAll ? enrichedPayments : { data: enrichedPayments, total: count || 0 };
+        return { data: enrichedPayments, total: count || 0 };
 
       } catch (error) {
         let errorMessage = 'Failed to load payments';
@@ -1872,7 +1872,7 @@ export const useQuotations = (
   return useQuery({
     queryKey: ['quotations', companyId, fetchAll ? 'all' : page, pageSize, search],
     queryFn: async () => {
-      if (!companyId) return fetchAll ? [] : { data: [], total: 0 };
+      if (!companyId) return { data: [], total: 0 };
 
       try {
         // If searching by customer name, first find matching customer IDs
@@ -1914,7 +1914,7 @@ export const useQuotations = (
 
         if (quotationsError) throw quotationsError;
         if (!quotations || quotations.length === 0) {
-          return fetchAll ? [] : { data: [], total: count || 0 };
+          return { data: [], total: count || 0 };
         }
 
         // Step 2: Get customers
@@ -1962,7 +1962,7 @@ export const useQuotations = (
           quotation_items: itemsMap.get(quotation.id) || []
         }));
 
-        return fetchAll ? enrichedQuotations : { data: enrichedQuotations, total: count || 0 };
+        return { data: enrichedQuotations, total: count || 0 };
 
       } catch (error) {
         const errorMessage = typeof error === 'string' ? error :
@@ -2165,8 +2165,9 @@ export const useGenerateDocumentNumber = () => {
 // Delivery Notes hooks
 export const useDeliveryNotes = (
   companyId?: string,
-  options?: { page?: number; pageSize?: number; search?: string }
+  options?: { page?: number; pageSize?: number; search?: string; fetchAll?: boolean }
 ) => {
+  const fetchAll = options?.fetchAll ?? true;
   const page = options?.page ?? 1;
   const pageSize = options?.pageSize ?? 10;
   const search = options?.search ?? '';
@@ -2194,7 +2195,9 @@ export const useDeliveryNotes = (
         query = query.or(`delivery_note_number.ilike.%${search}%,delivery_number.ilike.%${search}%,tracking_number.ilike.%${search}%,customers.name.ilike.%${search}%`);
       }
 
-      query = query.range(from, to);
+      if (!fetchAll) {
+        query = query.range(from, to);
+      }
       const { data, error, count } = await query;
 
       if (error) throw error;
@@ -2354,7 +2357,7 @@ export const useLPOs = (
       }
 
       if (search) {
-        query = query.or(`lpo_number.ilike.%${search}%,notes.ilike.%${search}%,customers.name.ilike.%${search}%`);
+        query = query.or(`lpo_number.ilike.%${search}%,notes.ilike.%${search}%,suppliers.name.ilike.%${search}%`);
       }
 
       if (!fetchAll) {
