@@ -6,14 +6,6 @@ import type { Database } from './types';
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://eubrvlzkvzevidivsfha.supabase.co';
 export const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1YnJ2bHprdnpldmlkaXZzZmhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwNjA4NTgsImV4cCI6MjA3MzYzNjg1OH0.ni7Ogq-dKLvnCDzi8KvUVG2c1P7s0qY4xdF4AuvKwKk';
 
-console.log('✅ [Supabase] Client initializing');
-console.log('📍 [Supabase] URL:', SUPABASE_URL);
-console.log('🔑 [Supabase] Using environment variables:', {
-  hasUrl: !!import.meta.env.VITE_SUPABASE_URL,
-  hasKey: !!import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-  env: import.meta.env.MODE
-});
-
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
@@ -21,25 +13,21 @@ console.log('🔑 [Supabase] Using environment variables:', {
 const getStorage = () => {
   if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
     try {
-      // Test if localStorage is accessible by trying to set/get/remove a test key
       const testKey = '__storage_test__';
       window.localStorage.setItem(testKey, 'test');
       window.localStorage.removeItem(testKey);
-      console.log('✅ [Supabase] localStorage is available and accessible');
       return window.localStorage;
     } catch (e) {
-      console.warn('⚠️ [Supabase] localStorage is blocked or unavailable:', e instanceof Error ? e.message : String(e));
       return undefined;
     }
   }
-  console.warn('⚠️ [Supabase] Not in browser environment or localStorage not available');
   return undefined;
 };
 
-// NOTE: The auto-generated `Database` types only cover a subset of the live schema
-// (tables like boqs, lcl_template_*, cash_receipts are missing). To unblock the
-// build while the types regenerate, the client is cast to `any` here. Runtime
-// behaviour is unchanged.
+// NOTE: The auto-generated Database types only cover a subset of the live schema
+// (tables like cash_receipts, lcl_template_* are missing). The client is cast to
+// `Database` but runtime queries may reference tables not in the type definitions.
+// TODO: Regenerate types with `supabase gen types typescript` to remove this cast.
 const supabaseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: getStorage(),
@@ -53,6 +41,6 @@ const supabaseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE
       'x-client-info': 'supabase-js/web',
     },
   },
-}) as any;
+});
 
 export { supabaseClient as supabase };

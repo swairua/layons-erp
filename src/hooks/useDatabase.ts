@@ -1245,6 +1245,60 @@ export const usePayments = (
   });
 };
 
+/**
+ * Hook for payment summary stats (today's total, month total, month count) across ALL payments.
+ * Uses server-side aggregation instead of filtering paginated data.
+ */
+export const usePaymentSummary = (companyId?: string) => {
+  return useQuery({
+    queryKey: ['payment_summary', companyId],
+    queryFn: async () => {
+      if (!companyId) return { todayTotal: 0, monthTotal: 0, monthCount: 0 };
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthStr = monthStart.toISOString().split('T')[0];
+
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      const monthEndStr = monthEnd.toISOString().split('T')[0];
+
+      const [todayResult, monthResult, monthCountResult] = await Promise.all([
+        supabase
+          .from('payments')
+          .select('amount')
+          .eq('company_id', companyId)
+          .eq('payment_date', todayStr),
+        supabase
+          .from('payments')
+          .select('amount')
+          .eq('company_id', companyId)
+          .gte('payment_date', monthStr)
+          .lte('payment_date', monthEndStr),
+        supabase
+          .from('payments')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .gte('payment_date', monthStr)
+          .lte('payment_date', monthEndStr),
+      ]);
+
+      const todayTotal = (todayResult.data || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      const monthTotal = (monthResult.data || []).reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+
+      return {
+        todayTotal,
+        monthTotal,
+        monthCount: monthCountResult.count || 0,
+      };
+    },
+    enabled: !!companyId,
+    staleTime: 60000,
+  });
+};
+
 export const useCustomerPayments = (customerId?: string, companyId?: string) => {
   return useQuery({
     queryKey: ['customer_payments', customerId, companyId],
@@ -1291,7 +1345,6 @@ export const useCreatePayment = () => {
 
       // Skip the database function call and use manual approach directly
       // The record_payment_with_allocation function doesn't exist, so we use fallback
-      console.log('Using manual payment recording with allocation');
 
       // Manual approach (fallback method)
       {
@@ -1314,7 +1367,6 @@ export const useCreatePayment = () => {
 
         try {
           // First check if payment_allocations table exists
-          console.log('Checking if payment_allocations table exists...');
           const { error: tableCheckError } = await supabase
             .from('payment_allocations')
             .select('id')
@@ -1322,14 +1374,8 @@ export const useCreatePayment = () => {
 
           if (tableCheckError && tableCheckError.message?.includes('relation') && tableCheckError.message?.includes('does not exist')) {
             allocationError = new Error('payment_allocations table does not exist. Please run the table setup SQL.');
-            console.error('RLS/Setup Error:', allocationError.message);
           } else {
             // Table exists, try to insert allocation
-            console.log('Inserting allocation:', {
-              payment_id: paymentResult.id,
-              invoice_id: invoice_id,
-              amount_allocated: paymentData.amount
-            });
 
             const { data: insertedAllocation, error: insertError } = await supabase
               .from('payment_allocations')
@@ -1341,13 +1387,10 @@ export const useCreatePayment = () => {
               .select();
 
             if (insertError) {
-              console.error('Allocation insert error:', insertError);
               allocationError = insertError;
             } else if (insertedAllocation && insertedAllocation.length > 0) {
-              console.log('Allocation created successfully:', insertedAllocation[0]);
               allocationCreated = true;
             } else {
-              console.warn('Allocation insert returned no data');
               allocationError = new Error('Allocation was not created - no response from server');
             }
           }
@@ -1420,14 +1463,6 @@ export const useCreatePayment = () => {
           allocation_error: null
         };
 
-        console.log('Payment creation result:', {
-          success: result.success,
-          payment_id: result.payment_id,
-          allocation_created: result.allocation_created,
-          allocation_failed: result.allocation_failed,
-          invoice_id: result.invoice_id
-        });
-
         return result;
       }
     },
@@ -1459,7 +1494,6 @@ export const useDeletePayment = () => {
 
       try {
         // Verify payment exists and belongs to this company before deletion
-        console.log('Verifying payment exists:', paymentId);
         const { data: paymentExists, error: verifyError } = await supabase
           .from('payments')
           .select('id, company_id')
@@ -1479,7 +1513,6 @@ export const useDeletePayment = () => {
           throw new Error('Payment not found. It may have been deleted already.');
         }
         // Step 1: Get payment allocations to reverse invoices
-        console.log('Fetching allocations for payment:', paymentId);
         const { data: allocations, error: allocError } = await supabase
           .from('payment_allocations')
           .select('id, invoice_id, allocated_amount')
@@ -1492,7 +1525,6 @@ export const useDeletePayment = () => {
         }
 
         const allocationsList = allocations || [];
-        console.log(`Found ${allocationsList.length} allocation(s) for payment ${paymentId}`);
 
         // Step 2: Reverse invoice adjustments for each allocation
         if (allocationsList.length > 0) {
@@ -1534,7 +1566,6 @@ export const useDeletePayment = () => {
                   console.warn(`Details - Attempted to reverse: paid=${reversedPaidAmount}, balance=${reversedBalanceDue}, status=${newStatus}`);
                   // Continue anyway - don't fail the entire delete
                 } else {
-                  console.log(`✅ Successfully reversed payment for invoice ${allocation.invoice_id}: ${reversedPaidAmount} → ${reversedBalanceDue} balance`);
                 }
               }
             } catch (err) {
@@ -1543,10 +1574,7 @@ export const useDeletePayment = () => {
             }
           }
 
-          console.log(`Payment deletion: Processed ${allocationsList.length} invoice allocation(s)`);
-
           // Step 3: Delete payment allocations
-          console.log('Deleting payment allocations for payment:', paymentId);
           const { error: deleteAllocError } = await supabase
             .from('payment_allocations')
             .delete()
@@ -1579,7 +1607,6 @@ export const useDeletePayment = () => {
         }
 
         // Step 4: Delete the payment record
-        console.log('Deleting payment:', paymentId);
         const { error: deletePaymentError } = await supabase
           .from('payments')
           .delete()
@@ -1598,15 +1625,12 @@ export const useDeletePayment = () => {
           } else if (typeof deletePaymentError === 'string') {
             errorMsg = deletePaymentError;
           } else {
-            // Try to stringify and inspect the error
             try {
               errorMsg = JSON.stringify(deletePaymentError);
             } catch {
               errorMsg = String(deletePaymentError);
             }
           }
-
-          console.error('Extracted error message:', errorMsg);
 
           // Handle specific error types
           if (errorMsg.includes('row-level security') || errorMsg.includes('permission denied')) {
@@ -1622,7 +1646,6 @@ export const useDeletePayment = () => {
           throw new Error(`Failed to delete payment: ${errorMsg}`);
         }
 
-        console.log('Payment deleted successfully:', paymentId);
         return {
           success: true,
           payment_id: paymentId,
@@ -2090,7 +2113,6 @@ export const useDeleteInvoice = () => {
 
       try {
         const result = await handleInvoiceDelete(id);
-        console.log('✅ Invoice deletion completed:', result);
         return result;
       } catch (err) {
         // Check if this is an RLS policy issue

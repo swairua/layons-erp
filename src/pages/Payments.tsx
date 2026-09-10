@@ -42,7 +42,7 @@ import {
   ChevronUp,
   FileText
 } from 'lucide-react';
-import { usePayments, useCompanies, useDeletePayment } from '@/hooks/useDatabase';
+import { usePayments, useCompanies, useDeletePayment, usePaymentSummary } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generatePaymentReceiptPDF } from '@/utils/pdfGenerator';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
@@ -157,8 +157,9 @@ export default function Payments() {
   });
   const payments = paymentData?.data || [];
   const totalPayments = paymentData?.total || 0;
-  const { data: invoices = [] } = useInvoices(currentCompany?.id);
+  const { data: invoices = [] } = useInvoices(currentCompany?.id, { fetchAll: false, page: 1, pageSize: 500 });
   const deletePayment = useDeletePayment();
+  const { data: paymentSummary } = usePaymentSummary(currentCompany?.id);
 
 
   const handleRecordPayment = () => {
@@ -191,7 +192,6 @@ export default function Payments() {
     }
 
     try {
-      console.log('Initiating payment deletion:', paymentToDelete.id);
       await deletePayment.mutateAsync({
         paymentId: paymentToDelete.id,
         companyId: currentCompany.id
@@ -225,13 +225,6 @@ export default function Payments() {
 
   const handleDownloadReceipt = async (payment: Payment) => {
     try {
-      // Debug: Log the payment data
-      console.log('Payment data for receipt:', {
-        payment_number: payment.payment_number,
-        payment_allocations: payment.payment_allocations,
-        allocations_count: payment.payment_allocations?.length || 0
-      });
-
       if (!payment.payment_allocations || payment.payment_allocations.length === 0) {
         toast.warning('No invoices associated with this payment. Receipt will be generated without invoice particulars.');
       }
@@ -256,8 +249,6 @@ export default function Payments() {
           };
         }) || []
       };
-
-      console.log('Enriched payment for PDF:', enrichedPayment);
 
       // Use the utility function with company details
       const companyDetails = currentCompany ? {
@@ -380,25 +371,11 @@ export default function Payments() {
     );
   }
 
-  // Calculate stats from live data
-  const totalReceivedToday = payments
-    .filter(p => new Date(p.payment_date).toDateString() === new Date().toDateString())
-    .reduce((sum, p) => sum + p.amount, 0);
-  
-  const totalThisMonth = payments
-    .filter(p => {
-      const paymentDate = new Date(p.payment_date);
-      const now = new Date();
-      return paymentDate.getMonth() === now.getMonth() && paymentDate.getFullYear() === now.getFullYear();
-    })
-    .reduce((sum, p) => sum + p.amount, 0);
-  
-  const completedThisMonth = payments
-    .filter(p => {
-      const paymentDate = new Date(p.payment_date);
-      const now = new Date();
-      return paymentDate.getMonth() === now.getMonth() && paymentDate.getFullYear() === now.getFullYear();
-    }).length;
+  // Summary stats from server-side aggregation queries
+  const summary = paymentSummary || { todayTotal: 0, monthTotal: 0, monthCount: 0 };
+  const totalReceivedToday = summary.todayTotal;
+  const totalThisMonth = summary.monthTotal;
+  const completedThisMonth = summary.monthCount;
   
   const pendingAmount = 0; // All payments in system are completed when recorded
 

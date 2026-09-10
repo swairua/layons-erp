@@ -38,11 +38,6 @@ export function Layout({ children }: LayoutProps) {
   const publicRoutes = ['/auth-test', '/manual-setup', '/database-fix-page', '/auto-fix', '/audit', '/auto-payment-sync', '/payment-sync', '/admin-recreate'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
 
-  // Log auth state changes
-  useEffect(() => {
-    console.log(`📍 [Layout] Auth state changed - isAuthenticated: ${isAuthenticated}, loading: ${loading}, route: ${location.pathname}`);
-  }, [isAuthenticated, loading, location.pathname]);
-
   // Prefetch data for child pages once company is known
   const queryClient = useQueryClient();
   const { currentCompany } = useCurrentCompany();
@@ -59,25 +54,14 @@ export function Layout({ children }: LayoutProps) {
       },
       staleTime: 5 * 60_000,
     });
-
-    queryClient.prefetchQuery({
-      queryKey: ['customers', cId],
-      queryFn: async () => {
-        const { data } = await supabase.from('customers').select('*').eq('company_id', cId).order('created_at', { ascending: false });
-        return data || [];
-      },
-      staleTime: 5 * 60_000,
-    });
   }, [currentCompany?.id, isAuthenticated, queryClient]);
 
   // Show login when auth init is complete and user is not authenticated
   if (!loading && !isAuthenticated && !isPublicRoute) {
-    console.log(`🔓 [Layout] Showing login - auth complete but user not authenticated, route: ${location.pathname}`);
     return <EnhancedLogin />;
   }
 
   if (loading && isAuthenticated) {
-    console.warn(`⚠️ [Layout] Unusual state: loading=true but isAuthenticated=true (stuck loading)`);
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="mb-4 text-center">
@@ -107,7 +91,6 @@ export function Layout({ children }: LayoutProps) {
 
   // Show loading spinner if loading and no authentication state yet
   if (loading) {
-    console.log(`⏳ [Layout] Still loading auth state...`);
     const loadingDuration = Math.floor((Date.now() - loadingStartTime) / 1000);
 
     return (

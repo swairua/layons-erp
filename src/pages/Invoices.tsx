@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-console.log('📄 Invoices.tsx module evaluation started');
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,7 +47,7 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { useCompanies, useDeleteInvoice } from '@/hooks/useDatabase';
-import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { useInvoicesFixed as useInvoices, useInvoiceSummary } from '@/hooks/useInvoicesFixed';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { toast } from 'sonner';
 import { parseErrorMessage } from '@/utils/errorHelpers';
@@ -143,6 +142,7 @@ export default function Invoices() {
   const invoices = invoicesData?.data || [];
   const totalInvoices = invoicesData?.total || 0;
   const deleteInvoice = useDeleteInvoice();
+  const { data: invoiceSummary } = useInvoiceSummary(currentCompany?.id);
 
   // Set dueStatus filter from URL params
   useEffect(() => {
@@ -159,15 +159,8 @@ export default function Invoices() {
         setIsFixingData(true);
         try {
           const result = await fixInvoiceColumns(currentCompany.id);
-          if (result.success) {
-            console.log('Invoice columns fixed successfully:', result.message);
-          } else {
-            console.warn('Invoice column fix had issues but continuing:', result.message);
-          }
           refetch();
         } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : JSON.stringify(err);
-          console.error('Error fixing invoice columns:', errorMsg);
           // Don't show error toast, silently continue - invoices will still load with calculated values
         } finally {
           setIsFixingData(false);
@@ -208,7 +201,6 @@ export default function Invoices() {
 
       // Check if this is an RLS error using our custom error type
       if (isRLSError(err)) {
-        console.log('🔧 RLS Error Detected - showing fix dialog');
         setShowRLSErrorDialog(true);
       } else {
         const errorMessage = parseErrorMessage(err);
@@ -232,12 +224,8 @@ export default function Invoices() {
     return 'current';
   };
 
-  // Calculate summary stats
-  const invoiceSummary = {
-    overdue: invoices?.filter(inv => categorizeInvoice(inv) === 'overdue').length || 0,
-    aging: invoices?.filter(inv => categorizeInvoice(inv) === 'aging').length || 0,
-    current: invoices?.filter(inv => categorizeInvoice(inv) === 'current').length || 0,
-  };
+  // Summary stats from server-side count queries
+  const invoiceSummaryData = invoiceSummary || { overdue: 0, aging: 0, current: 0 };
 
   // Filter and search logic (status/date/amount filters are client-side on server-filtered results)
   const filteredInvoices = invoices.filter(invoice => {
@@ -315,16 +303,10 @@ export default function Invoices() {
 
   const handleEditInvoice = async (invoice: Invoice) => {
     try {
-      console.log('🔍 handleEditInvoice called for:', invoice.invoice_number);
-      console.log('📋 Invoice ID:', invoice.id, 'Type:', typeof invoice.id, 'Length:', invoice.id?.length);
-      console.log('📋 Current invoice_items count:', invoice.invoice_items?.length || 0);
-
       // Validate that invoice.id is a valid UUID (should be 36 characters with dashes)
       const isValidUUID = invoice.id && typeof invoice.id === 'string' && invoice.id.length === 36 && invoice.id.includes('-');
-      console.log('✔️ Is valid UUID?', isValidUUID);
 
       if (!isValidUUID) {
-        console.error('❌ Invalid invoice ID format:', invoice.id);
         toast.error('Invalid invoice ID format. Cannot load items for editing.');
         return;
       }
@@ -333,7 +315,6 @@ export default function Invoices() {
       let enrichedInvoice: any = invoice;
 
       if (!invoice.invoice_items || invoice.invoice_items.length === 0) {
-        console.log('⚠️ No invoice items found, fetching from database for ID:', invoice.id);
         const { data: items, error } = await supabase
           .from('invoice_items')
           .select(`
@@ -359,22 +340,16 @@ export default function Invoices() {
           .order('sort_order', { ascending: true });
 
         if (error) {
-          console.error('❌ Failed to fetch invoice items - Error:', error);
           toast.error(`Failed to load invoice items: ${error.message}`);
           return;
         }
 
-        console.log('✅ Invoice items fetched from DB:', items?.length || 0);
         enrichedInvoice = { ...invoice, invoice_items: items || [] };
-      } else {
-        console.log('✅ Invoice already has items:', invoice.invoice_items.length);
       }
 
-      console.log('🔐 Setting selected invoice with items:', enrichedInvoice.invoice_items?.length || 0);
       setSelectedInvoice(enrichedInvoice);
       setShowEditModal(true);
     } catch (error) {
-      console.error('❌ Error in handleEditInvoice:', error);
       toast.error('Failed to load invoice for editing');
     }
   };
@@ -384,11 +359,7 @@ export default function Invoices() {
       // Ensure invoice has items; if not, fetch them on demand
       let enrichedInvoice: any = invoice;
 
-      console.log('📄 Starting invoice PDF download for:', invoice.invoice_number);
-      console.log('📋 Invoice items present:', invoice.invoice_items?.length || 0);
-
       if (!invoice.invoice_items || invoice.invoice_items.length === 0) {
-        console.log('⚠️ No invoice items found, fetching from database...');
         const { data: items, error } = await supabase
           .from('invoice_items')
           .select(`
@@ -414,16 +385,12 @@ export default function Invoices() {
           .order('sort_order', { ascending: true });
 
         if (error) {
-          console.error('❌ Failed to fetch invoice items:', error);
           toast.error('Failed to load invoice items for PDF');
           return;
         }
 
-        console.log('✅ Invoice items fetched:', items?.length || 0);
         enrichedInvoice = { ...invoice, invoice_items: items || [] };
       }
-
-      console.log('📦 Final invoice items for PDF:', enrichedInvoice.invoice_items?.length || 0);
 
       // Get current company details for PDF
       const companyDetails = currentCompany ? {
@@ -746,7 +713,7 @@ Website:`;
                   <p className="text-sm font-medium text-destructive">Overdue</p>
                 </div>
                 <Badge variant="destructive" className="text-lg font-bold px-3 py-1">
-                  {invoiceSummary.overdue}
+                  {invoiceSummaryData.overdue}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -768,7 +735,7 @@ Website:`;
                   <p className="text-sm font-medium text-warning">Due Soon</p>
                 </div>
                 <Badge variant="secondary" className="text-lg font-bold px-3 py-1">
-                  {invoiceSummary.aging}
+                  {invoiceSummaryData.aging}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -790,7 +757,7 @@ Website:`;
                   <p className="text-sm font-medium text-success">Valid</p>
                 </div>
                 <Badge className="text-lg font-bold px-3 py-1 bg-success text-success-foreground">
-                  {invoiceSummary.current}
+                  {invoiceSummaryData.current}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">

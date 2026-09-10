@@ -261,7 +261,6 @@ export const useCreateProforma = () => {
 
       if (proformaError) {
         const errorMessage = serializeError(proformaError).toLowerCase();
-        console.warn('Proforma insert failed, checking for schema mismatch:', errorMessage);
 
         if (errorMessage.includes('valid_until')) {
           const { valid_until, ...withoutValidUntil } = cleanProforma as any;
@@ -307,7 +306,6 @@ export const useCreateProforma = () => {
 
         if (itemsError) {
           const firstMsg = serializeError(itemsError).toLowerCase();
-          console.warn('Proforma items insert failed, attempting reduced columns:', firstMsg);
 
           // Retry without discount_amount / tax fields
           let proformaItemsReduced = items.map((item, index) => ({
@@ -546,8 +544,6 @@ export const useGenerateProformaNumber = () => {
               errorMessage.includes('is not defined') ||
               errorMessage.includes('cannot find') ||
               errorMessage.includes('schema cache')) {
-            console.warn('generate_proforma_number function not found, using fallback');
-            console.info('💡 To fix this permanently, visit: /proforma-function-fix');
             throw new Error('Database function not found. Visit /proforma-function-fix to create it.');
           }
 
@@ -555,7 +551,6 @@ export const useGenerateProformaNumber = () => {
           if (errorMessage.includes('permission denied') ||
               errorMessage.includes('access denied') ||
               errorMessage.includes('insufficient privilege')) {
-            console.warn('Permission denied for proforma number generation, using fallback');
             throw new Error('Permission denied for database function. Using fallback number generation.');
           }
 
@@ -573,8 +568,6 @@ export const useGenerateProformaNumber = () => {
         const fallbackNumber = `${seq}${month}${year}`;
 
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.warn('Proforma number generation failed, using fallback:', errorMessage);
-        console.info('Generated fallback number:', fallbackNumber);
 
         return fallbackNumber;
       }

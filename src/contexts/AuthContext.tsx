@@ -116,23 +116,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           window.localStorage.setItem(testKey, 'test');
           const value = window.localStorage.getItem(testKey);
           window.localStorage.removeItem(testKey);
-          console.log('✅ [AuthContext] localStorage is working - can read/write/remove');
         } catch (e) {
-          console.warn('⚠️ [AuthContext] localStorage exists but is blocked:', e instanceof Error ? e.message : String(e));
         }
-      } else {
-        console.warn('⚠️ [AuthContext] localStorage not available');
       }
 
-      // Check if auth token already exists in localStorage
       const existingToken = window.localStorage?.getItem('sb-auth-token');
-      if (existingToken) {
-        console.log('📋 [AuthContext] Found existing sb-auth-token in localStorage');
-      } else {
-        console.log('📋 [AuthContext] No sb-auth-token in localStorage yet');
-      }
     } catch (e) {
-      console.warn('⚠️ [AuthContext] Error checking storage:', e instanceof Error ? e.message : String(e));
     }
   }, []);
 
@@ -318,7 +307,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         await new Promise(resolve => setTimeout(resolve, 400));
         const { data: verifyData } = await supabase.auth.getSession();
         if (verifyData?.session?.user && mountedRef.current) {
-          console.log('[AuthContext] Ignoring transient SIGNED_OUT - session confirmed active');
           setSession(verifyData.session);
           setUser(verifyData.session.user);
           return;
@@ -380,42 +368,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // CRITICAL: Ensure initialization completes within 5 seconds no matter what
     const hardTimeout = setTimeout(() => {
-      console.warn('⚠️ Hard timeout: completing initialization');
       completeInit();
     }, 5000);
 
     const initializeAuthState = async () => {
       try {
-        console.log('🚀 [AuthContext] Starting auth initialization...');
-
-        // Log current localStorage state
-        try {
-          const storedToken = window.localStorage?.getItem('sb-auth-token');
-          console.log('📋 [AuthContext] Checking localStorage for sb-auth-token:', storedToken ? 'Found' : 'Not found');
-        } catch (e) {
-          console.warn('⚠️ [AuthContext] Cannot access localStorage:', e instanceof Error ? e.message : String(e));
-        }
-
         // Simple session check with generous timeout (Supabase may need to refresh the token)
         const sessionTimeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Session check timeout')), 3000);
         });
 
         try {
-          console.log('📡 [AuthContext] Calling supabase.auth.getSession()...');
           const { data: sessionData } = await Promise.race([
             supabase.auth.getSession(),
             sessionTimeoutPromise
           ]) as any;
 
           if (sessionData?.session?.user && mountedRef.current && !signingOutRef.current) {
-            console.log('✅ [AuthContext] Session found, user:', sessionData.session.user.email);
-            console.log('📋 [AuthContext] Session tokens:', {
-              hasAccessToken: !!sessionData.session.access_token,
-              hasRefreshToken: !!sessionData.session.refresh_token,
-              expiresAt: sessionData.session.expires_at
-            });
-
             // Explicitly set the session on the Supabase client to ensure auth headers
             // are wired for subsequent API calls
             try {
@@ -423,9 +392,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 access_token: sessionData.session.access_token,
                 refresh_token: sessionData.session.refresh_token,
               });
-              console.log('✅ [AuthContext] Session explicitly set on Supabase client');
             } catch (setSessionError) {
-              console.warn('⚠️ [AuthContext] Could not re-set session:', setSessionError instanceof Error ? setSessionError.message : String(setSessionError));
             }
 
             setSession(sessionData.session);
@@ -435,7 +402,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             // Fetch profile in background with timeout
             const profileTimeoutPromise = new Promise<UserProfile | null>((resolve) => {
               setTimeout(() => {
-                console.warn('⏱️ Profile fetch timeout (2s)');
                 resolve(null);
               }, 2000);
             });
@@ -473,7 +439,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }
         } catch (sessionError) {
           const errorMsg = sessionError instanceof Error ? sessionError.message : String(sessionError);
-          console.log('ℹ️ [AuthContext] No active session:', errorMsg);
         }
 
         completeInit();
@@ -522,23 +487,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         .catch(err => {
           console.warn('[AuthContext] Permission poll failed:', err instanceof Error ? err.message : String(err));
         });
-    }, 8000);
+    }, 60000);
 
     return () => clearInterval(pollInterval);
   }, [user]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    console.log(`🔐 [AuthContext] Starting sign in for: ${email}`);
-
     const hardTimeoutId = setTimeout(() => {
-      console.warn('⚠️ [AuthContext] Sign-in hard timeout (2s): forcing loading state clear');
       if (mountedRef.current) {
         setLoading(false);
       }
     }, 2000);
 
     const { data, error } = await safeAuthOperation(async () => {
-      console.log(`📝 [AuthContext] Calling supabase.auth.signInWithPassword for ${email}...`);
       setLoading(true);
       return await supabase.auth.signInWithPassword({
         email,
@@ -571,22 +532,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const session = (data as any)?.data?.session;
       const signedInUser = session?.user;
       if (signedInUser) {
-        console.log(`✅ [AuthContext] Sign-in successful for: ${signedInUser.email}`);
-        console.log('📋 [AuthContext] Session tokens:', {
-          hasAccessToken: !!session?.access_token,
-          hasRefreshToken: !!session?.refresh_token,
-          expiresAt: session?.expires_at
-        });
-
         // Check if token is stored in localStorage
         try {
           const storedToken = window.localStorage?.getItem('sb-auth-token');
-          console.log('📦 [AuthContext] sb-auth-token in localStorage after sign-in:', storedToken ? 'Present' : 'Missing');
         } catch (e) {
-          console.warn('⚠️ [AuthContext] Cannot check localStorage after sign-in:', e instanceof Error ? e.message : String(e));
         }
 
-        console.log('📝 [AuthContext] Setting session and user state after sign in');
         setSession(session);
         setUser(signedInUser);
         setProfileReady(false);
@@ -596,12 +547,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // This ensures components render with correct role/email filtering
           const profileTimeoutPromise = new Promise<UserProfile | null>((resolve) => {
             setTimeout(() => {
-              console.warn('⏱️ Profile fetch timeout during sign in (1s)');
               resolve(null);
             }, 1000); // 1 second timeout for sign in flow
           });
 
-          console.log('🔍 Starting profile fetch with 2s timeout...');
           const userProfile = await Promise.race([
             fetchProfile(signedInUser.id),
             profileTimeoutPromise
@@ -614,7 +563,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               }
               setProfile(userProfile);
               setProfileReady(true);
-              console.log('✅ Profile loaded successfully during sign in');
             } else {
               // Create minimal profile as fallback to allow app to function
               const fallbackProfile: UserProfile = {
@@ -627,19 +575,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               };
               setProfile(fallbackProfile);
               setProfileReady(true);
-              console.warn('⚠️ Profile fetch returned null, using fallback profile');
             }
 
             // Now safe to clear loading state - profile is set
-            console.log('✅ Clearing loading state after profile setup');
             setLoading(false);
 
             // Continue with background retry for profile if needed
             if (!userProfile) {
-              console.log('🔄 Starting background profile retry...');
               const retryTimeoutPromise = new Promise<UserProfile | null>((resolve) => {
                 setTimeout(() => {
-                  console.warn('⏱️ Profile retry timeout');
                   resolve(null);
                 }, 5000); // 5 second timeout for background retry
               });
@@ -651,7 +595,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 .then(retryProfile => {
                   if (mountedRef.current && retryProfile) {
                     setProfile(retryProfile);
-                    console.log('✅ Profile loaded on background retry');
                   }
                 })
                 .catch(retryError => {
@@ -682,7 +625,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setTimeout(() => toast.success('Signed in successfully'), 0);
         return { error: null };
       } else {
-        console.warn('⚠️ No user returned from sign in');
         clearTimeout(hardTimeoutId);
         setLoading(false);
         const errorMessage = 'Authentication failed: no user data returned';
@@ -755,10 +697,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signingOutRef.current = true;
 
     // Clear local auth state immediately and unconditionally so the UI never
-    // depends on the Supabase /logout request settling. Without this, a slow or
-    // hanging network call left loading=true while isAuthenticated stayed true,
-    // which made the app appear stuck on the "Loading..." screen indefinitely.
-    console.log('Starting sign out process...');
     setUser(null);
     setProfile(null);
     setPermissions({});
@@ -809,9 +747,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Network errors during sign out are non-critical since we clear local state anyway
         setTimeout(() => toast.info('Signed out locally (connection issue)'), 0);
       } else {
-        console.log('✅ Supabase sign out successful');
         setTimeout(() => toast.success('Signed out successfully'), 0);
-        console.log('🎉 Sign out complete!');
       }
     } catch (error) {
       // Handle network errors gracefully
@@ -992,8 +928,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: new Error(errorMsg) };
       }
 
-      console.log('📝 Attempting to change password for user:', userId);
-
       const { data, error } = await supabase.functions.invoke('change-user-password', {
         body: {
           userId,
@@ -1003,8 +937,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
-
-      console.log('Response from edge function:', { data, error });
 
       if (error) {
         logError('Error changing user password:', error, { context: 'changeUserPassword', targetUserId: userId, errorDetails: String(error) });
@@ -1017,12 +949,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       if (data?.success) {
-        console.log('✅ Password changed successfully');
         setTimeout(() => toast.success('Password changed successfully'), 0);
         return { error: null };
       } else {
         const errorMsg = data?.error || 'Failed to change password';
-        console.log('❌ Password change failed:', errorMsg);
         setTimeout(() => toast.error(errorMsg), 0);
         return { error: new Error(errorMsg) };
       }

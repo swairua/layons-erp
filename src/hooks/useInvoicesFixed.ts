@@ -23,8 +23,6 @@ export const useInvoicesFixed = (
       if (!companyId) return { data: [], total: 0 };
 
       try {
-        console.log('Fetching invoices for company:', companyId);
-
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           throw new Error('Authentication required: No active session');
@@ -39,7 +37,6 @@ export const useInvoicesFixed = (
             .eq('company_id', companyId)
             .or(`name.ilike.%${search}%,email.ilike.%${search}%`);
           matchingCustomerIds = (matchedCustomers || []).map(c => c.id);
-          // If no customers match, still try invoice_number search
         }
 
         // Step 1: Get invoices with pagination
@@ -89,73 +86,44 @@ export const useInvoicesFixed = (
           return { data: [], total: count || 0 };
         }
 
-        // Step 2: Get unique customer IDs
+        // Step 2: Get unique customer IDs and invoice IDs
         const customerIds = [...new Set(invoices.map(invoice => invoice.customer_id).filter(id => id && typeof id === 'string' && id.length === 36))];
-
-        // Step 3: Get customers
-        const { data: customers } = customerIds.length > 0 ? await supabase
-          .from('customers')
-          .select('id, name, email, phone, address, city, country')
-          .in('id', customerIds) : { data: [], error: null };
-
-        const customerMap = new Map();
-        (customers || []).forEach(customer => {
-          customerMap.set(customer.id, customer);
-        });
-
-        // Step 4a: Get company details
-        const { data: company } = await supabase
-          .from('companies')
-          .select('id, name, address, city, country, phone, email, tax_number')
-          .eq('id', companyId)
-          .single();
-
-        // Step 5: Get invoice items for paginated invoices only
         const invoiceIds = invoices.map(inv => inv.id).filter(id => id && typeof id === 'string');
 
-        let invoiceItems = [] as any[];
-        try {
-          if (invoiceIds.length > 0) {
-            const { data, error } = await supabase
-              .from('invoice_items')
-              .select(`
+        // Step 3-6: Fetch related data in parallel
+        const [customersResult, companyResult, itemsResult, allocationsResult] = await Promise.all([
+          customerIds.length > 0
+            ? supabase.from('customers').select('id, name, email, phone, address, city, country').in('id', customerIds)
+            : Promise.resolve({ data: [], error: null }),
+          supabase.from('companies').select('id, name, address, city, country, phone, email, tax_number').eq('id', companyId).single(),
+          invoiceIds.length > 0
+            ? supabase.from('invoice_items').select(`
                 id, invoice_id, product_id, description, quantity, unit_price,
                 discount_percentage, discount_before_vat, tax_percentage, tax_amount,
                 tax_inclusive, line_total, sort_order, section_name, section_labor_cost,
                 unit_of_measure, products(id, name, product_code, unit_of_measure)
-              `)
-              .in('invoice_id', invoiceIds);
-            if (!error && data) invoiceItems = data;
-          }
-        } catch (err) {
-          console.error('Error fetching invoice items (non-fatal):', err);
-        }
+              `).in('invoice_id', invoiceIds)
+            : Promise.resolve({ data: [], error: null }),
+          invoiceIds.length > 0
+            ? supabase.from('payment_allocations').select(`
+                id, invoice_id, payment_id, amount_allocated,
+                payments(id, payment_number, payment_date, amount, payment_method, reference_number)
+              `).in('invoice_id', invoiceIds)
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+
+        // Build lookup maps
+        const customerMap = new Map();
+        (customersResult.data || []).forEach(customer => customerMap.set(customer.id, customer));
 
         const itemsMap = new Map();
-        (invoiceItems || []).forEach(item => {
+        (itemsResult.data || []).forEach(item => {
           if (!itemsMap.has(item.invoice_id)) itemsMap.set(item.invoice_id, []);
           itemsMap.get(item.invoice_id).push(item);
         });
 
-        // Step 6a: Fetch payment allocations
-        let paymentAllocations = [] as any[];
-        try {
-          if (invoiceIds.length > 0) {
-            const { data, error } = await supabase
-              .from('payment_allocations')
-              .select(`
-                id, invoice_id, payment_id, amount_allocated,
-                payments(id, payment_number, payment_date, amount, payment_method, reference_number)
-              `)
-              .in('invoice_id', invoiceIds);
-            if (!error && data) paymentAllocations = data;
-          }
-        } catch (err) {
-          console.error('Error fetching payment allocations (non-fatal):', err);
-        }
-
         const allocationsMap = new Map();
-        (paymentAllocations || []).forEach(alloc => {
+        (allocationsResult.data || []).forEach(alloc => {
           if (!allocationsMap.has(alloc.invoice_id)) allocationsMap.set(alloc.invoice_id, []);
           allocationsMap.get(alloc.invoice_id).push(alloc);
         });
@@ -164,7 +132,7 @@ export const useInvoicesFixed = (
         const enrichedInvoices = invoices.map(invoice => ({
           ...invoice,
           customers: customerMap.get(invoice.customer_id) || { name: 'Unknown Customer', email: null, phone: null },
-          company: company || null,
+          company: companyResult.data || null,
           invoice_items: itemsMap.get(invoice.id) || [],
           payment_allocations: allocationsMap.get(invoice.id) || []
         }));
@@ -193,8 +161,6 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
       if (!customerId) return [];
 
       try {
-        console.log('Fetching invoices for customer:', customerId);
-
         // Get invoices for specific customer
         // Note: Use paid_amount and balance_due as per the database schema
         // Note: company_id column may not exist; filtering by company happens via customer relationship
@@ -253,12 +219,10 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
               .single();
 
             if (companyError) {
-              console.error('Error fetching company (non-fatal):', companyError);
             } else {
               company = companyData;
             }
           } catch (err) {
-            console.error('Error fetching company (non-fatal):', err);
           }
         }
 
@@ -390,5 +354,56 @@ export const useCustomerInvoicesFixed = (customerId?: string, companyId?: string
     },
     enabled: !!customerId,
     staleTime: 30000,
+  });
+};
+
+/**
+ * Hook for invoice summary counts (overdue/aging/current) across ALL invoices.
+ * Uses server-side count queries instead of filtering paginated data.
+ */
+export const useInvoiceSummary = (companyId?: string) => {
+  return useQuery({
+    queryKey: ['invoice_summary', companyId],
+    queryFn: async () => {
+      if (!companyId) return { overdue: 0, aging: 0, current: 0 };
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      const weekFromNow = new Date(today);
+      weekFromNow.setDate(weekFromNow.getDate() + 7);
+      const weekStr = weekFromNow.toISOString().split('T')[0];
+
+      const [overdueResult, agingResult, currentResult] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .lt('due_date', todayStr)
+          .neq('status', 'cancelled'),
+        supabase
+          .from('invoices')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .gte('due_date', todayStr)
+          .lte('due_date', weekStr)
+          .neq('status', 'cancelled'),
+        supabase
+          .from('invoices')
+          .select('id', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .gt('due_date', weekStr)
+          .neq('status', 'cancelled'),
+      ]);
+
+      return {
+        overdue: overdueResult.count || 0,
+        aging: agingResult.count || 0,
+        current: currentResult.count || 0,
+      };
+    },
+    enabled: !!companyId,
+    staleTime: 60000,
   });
 };

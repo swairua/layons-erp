@@ -9,14 +9,6 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useCurrentCompany } from "@/contexts/CompanyContext";
 import { setFavicon } from "@/utils/setFavicon";
 import { updateMetaTags } from "@/utils/updateMetaTags";
-import { verifyInvoiceCompanyIdColumn } from "@/utils/fixMissingInvoiceCompanyId";
-import { verifyInvoiceRLSFix } from "@/utils/fixInvoiceRLSPolicy";
-import { verifyRLSDisabled } from "@/utils/disableInvoiceRLS";
-import { fixRLSWithProperOrder, verifyRLSColumnFix } from "@/utils/fixRLSProperOrder";
-import { fixQuotationsRLS, verifyQuotationsRLS } from "@/utils/fixQuotationsRLS";
-import { ensureRLSPolicies } from "@/utils/ensureRLSPolicies";
-import { ensureCompanyImageColumns } from "@/utils/ensureDatabaseColumns";
-import { ensureDatabaseIndexes } from "@/utils/ensureDatabaseIndexes";
 
 const lazyWithRetry = <T extends ComponentType<unknown>>(
   importer: () => Promise<{ default: T }>,
@@ -152,125 +144,6 @@ const App = () => {
   const { currentCompany } = useCurrentCompany();
 
   useEffect(() => {
-    // Initialize on app startup
-    // Non-blocking async initialization
-    (async () => {
-      try {
-        // Check if RLS is properly disabled (fixes infinite recursion)
-        const rslDisabled = await verifyRLSDisabled();
-        if (!rslDisabled) {
-          console.error('❌ RLS RECURSION ERROR DETECTED');
-          console.error('The database has RLS policies that cause infinite recursion.');
-          console.error('');
-          console.error('📋 IMMEDIATE FIX REQUIRED:');
-          console.error('1. Open your Supabase Dashboard');
-          console.error('2. Go to SQL Editor');
-          console.error('3. Copy and run the SQL from: FINAL_RLS_RECURSION_FIX.sql');
-          console.error('4. Then refresh this page');
-          console.error('');
-          console.error('OR use the ManualSQLSetup page at /setup-test');
-        } else {
-          console.log('✅ RLS check passed - database is accessible');
-        }
-
-        // First, ensure RLS policies exist so we can access tables
-        try {
-          console.log('📋 Ensuring database policies are configured...');
-          const policyResult = await ensureRLSPolicies();
-          if (!policyResult.success) {
-            console.warn('⚠️ Could not ensure RLS policies:', policyResult.message);
-          } else {
-            console.log('✅ RLS policies are configured');
-          }
-        } catch (err) {
-          console.warn('⚠️ Error ensuring RLS policies:', err);
-        }
-
-        // Verify invoices table is accessible
-        // Note: company_id column may not exist - invoices are linked through customers
-        // Silently verify - don't show errors to user during startup
-        try {
-          const companyIdExists = await verifyInvoiceCompanyIdColumn();
-          if (!companyIdExists) {
-            // Log but don't show to user during initialization
-            console.log('ℹ️ Invoices table verification ongoing...');
-          }
-        } catch (err) {
-          // Silently handle - will retry on actual data access
-        }
-
-        // Fix RLS policy for invoice deletion (handles company_id column issue)
-        try {
-          const isFixed = await verifyRLSColumnFix();
-          if (!isFixed) {
-            console.log('🔧 RLS column issue detected. Attempting to fix (disable → add column → re-enable)...');
-            const fixResult = await fixRLSWithProperOrder();
-            if (fixResult.success) {
-              console.log('✅ RLS column fix applied successfully');
-            } else if (fixResult.requiresManualFix) {
-              console.warn('⚠️ Manual RLS fix required. User will see a fix dialog when they try to delete an invoice.');
-            }
-          } else {
-            console.log('✅ RLS column verification passed - database is ready');
-          }
-        } catch (err) {
-          console.warn('⚠️ Could not automatically fix RLS column issue', err);
-        }
-
-        // Verify invoice RLS policy doesn't have infinite recursion
-        try {
-          await verifyInvoiceRLSFix();
-        } catch (err) {
-          console.warn('⚠️ Could not verify invoice RLS fix', err);
-        }
-
-        // Fix quotations RLS policy issue
-        try {
-          const quotationsRLSFixed = await verifyQuotationsRLS();
-          if (!quotationsRLSFixed) {
-            console.log('🔧 Quotations RLS issue detected. Attempting to fix...');
-            const fixResult = await fixQuotationsRLS();
-            if (fixResult.success) {
-              console.log('✅ Quotations RLS fix applied successfully');
-            } else if (fixResult.requiresManualFix) {
-              console.warn('⚠️ Manual quotations RLS fix required. Please run the SQL in Supabase.');
-            }
-          } else {
-            console.log('✅ Quotations RLS verification passed');
-          }
-        } catch (err) {
-          console.warn('⚠️ Could not automatically fix quotations RLS issue', err);
-        }
-
-        // Ensure company image columns exist once at app startup (avoids per-hook RPC calls)
-        try {
-          console.log('📋 Ensuring company database columns are configured...');
-          await ensureCompanyImageColumns();
-          console.log('✅ Company columns are configured');
-        } catch (err) {
-          console.warn('⚠️ Could not ensure company image columns (non-critical):', err);
-        }
-
-        // Log information about database indexes (performance optimization)
-        try {
-          console.log('📊 Checking database indexes for BOQ/LCL performance...');
-          const indexResult = await ensureDatabaseIndexes();
-          if (indexResult.success) {
-            console.log('✅ ' + indexResult.message);
-          } else {
-            console.warn('⚠️ ' + indexResult.message);
-          }
-        } catch (err) {
-          console.warn('⚠️ Could not verify database indexes (non-critical):', err);
-        }
-      } catch (error) {
-        console.warn('Database initialization completed with issues (non-critical)', error);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    // Update favicon when company logo changes
     setFavicon(currentCompany?.logo_url);
   }, [currentCompany?.logo_url]);
 
@@ -652,11 +525,11 @@ const App = () => {
             }
           />
 
-          {/* Database Fix - No protection needed (for troubleshooting) */}
-          <Route path="/database-fix" element={<DatabaseFix />} />
+          {/* Database Fix - Admin only */}
+          <Route path="/database-fix" element={<ProtectedRoute><DatabaseFix /></ProtectedRoute>} />
 
-          {/* Company ID Consolidation Tool */}
-          <Route path="/company-id-consolidation" element={<CompanyIdConsolidation />} />
+          {/* Company ID Consolidation Tool - Admin only */}
+          <Route path="/company-id-consolidation" element={<ProtectedRoute><CompanyIdConsolidation /></ProtectedRoute>} />
 
           {/* Audit Logs */}
           <Route
@@ -670,8 +543,8 @@ const App = () => {
             }
           />
 
-          {/* Payment Synchronization - No protection needed for setup */}
-          <Route path="/payment-sync" element={<Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PaymentSynchronizationPage /></Suspense>} />
+          {/* Payment Synchronization - Admin only */}
+          <Route path="/payment-sync" element={<ProtectedRoute><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PaymentSynchronizationPage /></Suspense></ProtectedRoute>} />
 
 
           {/* Optimized Inventory - Performance-optimized inventory page */}
@@ -686,8 +559,8 @@ const App = () => {
             }
           />
 
-          {/* Performance Optimizer - Database and inventory performance optimization */}
-          <Route path="/performance-optimizer" element={<Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PerformanceOptimizerPage /></Suspense>} />
+          {/* Performance Optimizer - Admin only */}
+          <Route path="/performance-optimizer" element={<ProtectedRoute><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PerformanceOptimizerPage /></Suspense></ProtectedRoute>} />
 
 
           {/* Optimized Customers - Performance-optimized customers page */}
@@ -702,8 +575,8 @@ const App = () => {
             }
           />
 
-          {/* Customer Performance Optimizer - Database and customer performance optimization */}
-          <Route path="/customer-performance-optimizer" element={<Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><CustomerPerformanceOptimizerPage /></Suspense>} />
+          {/* Customer Performance Optimizer - Admin only */}
+          <Route path="/customer-performance-optimizer" element={<ProtectedRoute><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><CustomerPerformanceOptimizerPage /></Suspense></ProtectedRoute>} />
 
 
 
