@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
 import { useServerPagination } from '@/hooks/useServerPagination';
 import {
@@ -310,6 +311,17 @@ export default function Payments() {
             <h1 className="text-3xl font-bold text-foreground">Payments</h1>
             <p className="text-muted-foreground">Loading payment data...</p>
           </div>
+        </div>
+        <div className="space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
         </div>
       </div>
     );

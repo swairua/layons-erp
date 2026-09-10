@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -835,9 +835,9 @@ Website:`;
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInvoices.map((invoice: Invoice) => (
-                    <>
-                    <TableRow key={invoice.id} className="hover:bg-muted/50 transition-smooth">
+                   {filteredInvoices.map((invoice: Invoice) => (
+                     <React.Fragment key={invoice.id}>
+                     <TableRow className="hover:bg-muted/50 transition-smooth">
                       <TableCell className="w-10">
                         <Button
                           variant="ghost"
@@ -991,7 +991,7 @@ Website:`;
                         </TableCell>
                       </TableRow>
                     )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
