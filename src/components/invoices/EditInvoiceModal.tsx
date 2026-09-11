@@ -38,6 +38,7 @@ import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
+import { toCollection } from '@/utils/collection';
 
 interface InvoiceItem {
   id: string;
@@ -85,7 +86,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const [previewItem, setPreviewItem] = useState<{ sectionId: string; itemId: string } | null>(null);
 
   const { currentCompany } = useCurrentCompany();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
   const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const updateInvoiceWithItems = useUpdateInvoiceWithItems();
