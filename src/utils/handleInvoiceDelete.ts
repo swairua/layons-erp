@@ -13,9 +13,8 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
   try {
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
-      .select('id, company_id')
+      .select('id')
       .eq('id', invoiceId)
-      .eq('company_id', companyId)
       .single();
 
     if (invoiceError) throw new Error(`Unable to verify invoice: ${invoiceError.message}`);
@@ -24,9 +23,8 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
     // Step 1: Check if this invoice came from a BOQ
     const { data: boqRecord, error: boqError } = await supabase
       .from('boqs')
-      .select('id, company_id, status')
+      .select('id, status')
       .eq('converted_to_invoice_id', invoiceId)
-      .eq('company_id', companyId)
       .single();
 
     let boqWasReversed = false;
@@ -41,8 +39,7 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
           converted_to_invoice_id: null,
           converted_at: null
         })
-        .eq('id', boqRecord.id)
-        .eq('company_id', companyId);
+        .eq('id', boqRecord.id);
 
       if (reverseError) {
         throw new Error(`Failed to reverse BOQ status: ${reverseError.message}`);
@@ -58,8 +55,7 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
     const { data: deliveryNotes, error: deliveryError } = await supabase
       .from('delivery_notes')
       .select('id')
-      .eq('invoice_id', invoiceId)
-      .eq('company_id', companyId);
+      .eq('invoice_id', invoiceId);
 
     if (deliveryNotes && deliveryNotes.length > 0) {
       console.log('🚚 Found', deliveryNotes.length, 'delivery notes to delete');
@@ -68,8 +64,7 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
       const { error: deleteDeliveryError } = await supabase
         .from('delivery_notes')
         .delete()
-        .eq('invoice_id', invoiceId)
-        .eq('company_id', companyId);
+        .eq('invoice_id', invoiceId);
 
       if (deleteDeliveryError) {
         console.error('⚠️ Failed to delete delivery notes:', deleteDeliveryError);
@@ -86,8 +81,7 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
       .from('stock_movements')
       .select('id, product_id, movement_type, quantity, company_id')
       .eq('reference_type', 'INVOICE')
-      .eq('reference_id', invoiceId)
-      .eq('company_id', companyId);
+      .eq('reference_id', invoiceId);
 
     if (stockError) {
       throw new Error(`Failed to check stock movements: ${stockError.message}`);
@@ -146,7 +140,6 @@ export async function handleInvoiceDelete(invoiceId: string, companyId: string) 
       .from('invoices')
       .delete()
       .eq('id', invoiceId)
-      .eq('company_id', companyId)
       .select('id')
       .maybeSingle();
 
