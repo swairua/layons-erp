@@ -41,6 +41,7 @@ import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
 import { supabase } from '@/integrations/supabase/client';
+import { toCollection } from '@/utils/collection';
 
 interface InvoiceItem {
   id: string;
@@ -79,7 +80,6 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   );
   const [currency, setCurrency] = useState('KES');
   const [exchangeRate, setExchangeRate] = useState<number>(1);
-  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('Payment due within 30 days of invoice date.');
@@ -97,8 +97,11 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const { profile, loading: authLoading } = useAuth();
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const createInvoiceWithItems = useCreateInvoiceWithItems();
   const generateDocNumber = useGenerateDocumentNumber();

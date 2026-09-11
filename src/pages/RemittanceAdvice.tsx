@@ -30,6 +30,7 @@ import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { CreateRemittanceModal } from '@/components/remittance/CreateRemittanceModalFixed';
 import { ViewRemittanceModal } from '@/components/remittance/ViewRemittanceModal';
 import { EditRemittanceModal } from '@/components/remittance/EditRemittanceModal';
+import { toCollection } from '@/utils/collection';
 
 // Remittance advice page - uses real database data via useRemittanceAdvice hook
 
@@ -49,7 +50,7 @@ const RemittanceAdvice = () => {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const remittances = remData?.data || [];
+  const remittances = toCollection(remData);
   const totalRemittances = remData?.total || 0;
 
   const handleViewRemittance = (remittance: any) => {

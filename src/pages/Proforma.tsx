@@ -38,6 +38,7 @@ import { ViewProformaModal } from '@/components/proforma/ViewProformaModal';
 import { downloadInvoicePDF, downloadQuotationPDF } from '@/utils/pdfGenerator';
 import { formatCurrency } from '@/utils/taxCalculation';
 import { ensureProformaSchema } from '@/utils/proformaDatabaseSetup';
+import { toCollection } from '@/utils/collection';
 
 export default function Proforma() {
   const [searchParams] = useSearchParams();
@@ -68,7 +69,7 @@ export default function Proforma() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const proformas = proformaData?.data || [];
+  const proformas = toCollection(proformaData);
   const totalProformas = proformaData?.total || 0;
   const convertToInvoice = useConvertProformaToInvoice();
 

@@ -51,6 +51,7 @@ import { CreditNotesSetupGuide } from '@/components/credit-notes/CreditNotesSetu
 import { SimpleForeignKeyPatch } from '@/components/credit-notes/SimpleForeignKeyPatch';
 import { useCreditNotePDFDownload } from '@/hooks/useCreditNotePDF';
 import type { CreditNote } from '@/hooks/useCreditNotes';
+import { toCollection } from '@/utils/collection';
 
 function getStatusColor(status: string) {
   switch (status) {
@@ -91,7 +92,7 @@ export default function CreditNotes() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const creditNotes = cnData?.data || [];
+  const creditNotes = toCollection(cnData);
   const totalCreditNotes = cnData?.total || 0;
   const downloadPDF = useCreditNotePDFDownload();
 

@@ -37,6 +37,7 @@ import { ProformaErrorSolution } from '@/components/fixes/ProformaErrorSolution'
 import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { toCollection } from '@/utils/collection';
 
 interface CreateProformaModalOptimizedProps {
   open: boolean;
@@ -69,11 +70,13 @@ export const CreateProformaModalOptimized = ({
   const [currency, setCurrency] = useState('KES');
   const [exchangeRate, setExchangeRate] = useState<number>(1);
 
-  const { data: customers, isLoading: customersLoading } = useCustomers(companyId);
-  const { data: products, isLoading: productsLoading } = useProducts(companyId);
+  const { data: customersResponse, isLoading: customersLoading } = useCustomers(companyId);
+  const { data: productsResponse, isLoading: productsLoading } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
+  const customers = toCollection(customersResponse);
+  const products = toCollection(productsResponse);
   const createProforma = useCreateProforma();
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
 
@@ -135,7 +138,7 @@ export const CreateProformaModalOptimized = ({
     }
   };
 
-  const filteredProducts = products?.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.product_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -345,7 +348,7 @@ export const CreateProformaModalOptimized = ({
                     <SelectValue placeholder="Select customer" />
                   </SelectTrigger>
                   <SelectContent>
-                    {customers?.map((customer) => (
+                    {customers.map((customer) => (
                       <SelectItem key={customer.id} value={customer.id}>
                         {customer.name}
                       </SelectItem>

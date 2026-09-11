@@ -63,6 +63,7 @@ import { isRLSError } from '@/utils/RLSError';
 import { downloadInvoicePDF } from '@/utils/pdfGenerator';
 import { fixInvoiceColumns, calculateInvoiceStatus } from '@/utils/fixInvoiceColumns';
 import { supabase } from '@/integrations/supabase/client';
+import { toCollection } from '@/utils/collection';
 
 interface Invoice {
   id: string;
@@ -139,7 +140,7 @@ export default function Invoices() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const invoices = invoicesData?.data || [];
+  const invoices = toCollection(invoicesData);
   const totalInvoices = invoicesData?.total || 0;
   const deleteInvoice = useDeleteInvoice();
   const { data: invoiceSummary } = useInvoiceSummary(currentCompany?.id);

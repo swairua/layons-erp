@@ -40,6 +40,7 @@ import { ViewLPOModal } from '@/components/lpo/ViewLPOModal';
 import { EditLPOModal } from '@/components/lpo/EditLPOModal';
 import { DirectForceMigration } from '@/components/DirectForceMigration';
 import { LPOCustomerSupplierAudit } from '@/components/LPOCustomerSupplierAudit';
+import { toCollection } from '@/utils/collection';
 
 export default function LPOs() {
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -60,7 +61,7 @@ export default function LPOs() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const lpos = lpoData?.data || [];
+  const lpos = toCollection(lpoData);
   const totalLPOs = lpoData?.total || 0;
   const updateLPO = useUpdateLPO();
 
