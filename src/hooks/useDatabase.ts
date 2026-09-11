@@ -2145,7 +2145,7 @@ export const useDeleteInvoice = () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['boqs'] });
       queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
-      queryClient.invalidateQueries({ queryKey: ['invoice_summary', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['invoice_summary', variables.companyId] });
     },
   });
 };
