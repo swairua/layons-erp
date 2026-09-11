@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { useCustomers, usePayments } from '@/hooks/useDatabase';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { toCollection } from '@/utils/collection';
 
 // Helper function to compute customer statements from real data
 const computeCustomerStatements = (customers: any[], invoices: any[], payments: any[]) => {
@@ -147,11 +148,12 @@ const StatementOfAccounts = () => {
 
   // Real data hooks
   const { currentCompany } = useCurrentCompany();
-  const { data: customers } = useCustomers(currentCompany?.id);
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
   const { data: invoiceResponse } = useInvoices(currentCompany?.id);
   const { data: paymentResponse } = usePayments(currentCompany?.id);
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
-  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
+  const payments = toCollection(paymentResponse);
 
   // Compute statements from real data
   const computedStatements = computeCustomerStatements(customers || [], invoices, payments);

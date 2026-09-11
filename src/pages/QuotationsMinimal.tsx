@@ -6,12 +6,13 @@ import { useQuotations } from '@/hooks/useDatabase';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 export default function QuotationsMinimal() {
   const { profile } = useAuth();
   const { currentCompany } = useCurrentCompany();
   const { data: quotationResponse, isLoading, error } = useQuotations(currentCompany?.id);
-  const quotations = Array.isArray(quotationResponse) ? quotationResponse : quotationResponse?.data ?? [];
+  const quotations = toCollection(quotationResponse);
 
   if (error) {
     return (

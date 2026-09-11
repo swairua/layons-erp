@@ -7,6 +7,7 @@ import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toCollection } from '@/utils/collection';
 
 interface Activity {
   id: string;
@@ -54,9 +55,9 @@ export function RecentActivity() {
   const { data: invoiceResponse, isLoading: invoicesLoading } = useInvoices(currentCompany?.id);
   const { data: paymentResponse, isLoading: paymentsLoading } = usePayments(currentCompany?.id);
   const { data: remittanceResponse, isLoading: remittancesLoading } = useRemittanceAdvice(currentCompany?.id);
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
-  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
-  const remittances = Array.isArray(remittanceResponse) ? remittanceResponse : remittanceResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
+  const payments = toCollection(paymentResponse);
+  const remittances = toCollection(remittanceResponse);
 
   const isLoading = invoicesLoading || paymentsLoading || remittancesLoading;
 

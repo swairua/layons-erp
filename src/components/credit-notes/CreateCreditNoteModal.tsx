@@ -34,6 +34,7 @@ import {
 import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useGenerateCreditNoteNumber } from '@/hooks/useCreditNotes';
+import { toCollection } from '@/utils/collection';
 import { useCreateCreditNoteWithItems } from '@/hooks/useCreditNoteItems';
 import { toast } from 'sonner';
 
@@ -80,11 +81,13 @@ export function CreateCreditNoteModal({
   const { data: companies, isLoading: loadingCompanies, error: companiesError } = useCompanies();
   const companyId = companies?.[0]?.id;
   
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(companyId);
-  const { data: products, isLoading: loadingProducts } = useProducts(companyId);
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(companyId);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(companyId);
   const { data: invoiceResponse } = useInvoices(companyId);
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
   const createCreditNoteWithItems = useCreateCreditNoteWithItems();
   const generateCreditNoteNumber = useGenerateCreditNoteNumber();
 

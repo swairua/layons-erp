@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { toCollection } from '@/utils/collection';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -86,8 +87,10 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [previewItem, setPreviewItem] = useState<{ sectionId: string; itemId: string } | null>(null);
 
   const { currentCompany } = useCurrentCompany();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
 
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
@@ -140,7 +143,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
     }
   }, [quotation, open, currentCompany?.currency]);
 
-  const filteredProducts = products?.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
     product.product_code.toLowerCase().includes(searchProduct.toLowerCase())
   ) || [];

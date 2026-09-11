@@ -178,7 +178,7 @@ export default function OptimizedInventory() {
   
   const totalPages = useMemo(() => {
     if (!productsData) return 0;
-    return Math.ceil(productsData.totalCount / pageSize);
+    return Math.ceil(productsData.total / pageSize);
   }, [productsData, pageSize]);
 
   // Event handlers with useCallback for better performance
@@ -280,7 +280,7 @@ export default function OptimizedInventory() {
     );
   }
 
-  const products = productsData?.products || [];
+  const products = productsData?.data || [];
 
   return (
     <div className="space-y-6">

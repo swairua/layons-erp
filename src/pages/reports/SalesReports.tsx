@@ -42,6 +42,7 @@ import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { getCurrencySymbol } from '@/utils/currencyFormatter';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 export default function SalesReports() {
   const [dateRange, setDateRange] = useState('last_30_days');
@@ -54,9 +55,11 @@ export default function SalesReports() {
   const currency = getCurrencySymbol(currentCompany?.currency);
 
   const { data: invoiceResponse, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
-  const { data: customers, isLoading: customersLoading, error: customersError } = useCustomers(companyId);
-  const { data: products, isLoading: productsLoading, error: productsError } = useProducts(companyId);
+  const invoices = toCollection(invoiceResponse);
+  const { data: customersResponse, isLoading: customersLoading, error: customersError } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: productsLoading, error: productsError } = useProducts(companyId);
+  const products = toCollection(productsResponse);
 
   const isLoading = invoicesLoading || customersLoading || productsLoading;
   const hasError = invoicesError || customersError || productsError;

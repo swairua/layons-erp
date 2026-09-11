@@ -34,6 +34,7 @@ import { toast } from 'sonner';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { exportCustomerStatementsToCSV, exportCustomerStatementSummaryToCSV } from '@/utils/csvExporter';
 import CustomerStatementPreviewModal from '@/components/statements/CustomerStatementPreviewModal';
+import { toCollection } from '@/utils/collection';
 
 interface CustomerStatement {
   customer_id: string;
@@ -58,11 +59,12 @@ export default function CustomerStatements() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewCustomer, setPreviewCustomer] = useState<CustomerStatement | null>(null);
 
-  const { data: customers } = useCustomers();
+  const { data: customersResponse } = useCustomers();
+  const customers = toCollection(customersResponse);
   const { data: invoiceResponse } = useInvoices();
   const { data: paymentResponse } = usePayments();
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
-  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
+  const payments = toCollection(paymentResponse);
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 

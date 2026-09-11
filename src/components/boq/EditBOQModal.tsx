@@ -42,6 +42,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { saveEditingDraft, loadEditDraft, deleteEditDraft } from '@/services/boqAutoSaveService';
+import { toCollection } from '@/utils/collection';
 
 // Safe UUID generator that works in all environments
 const generateSafeUUID = (): string => {
@@ -108,7 +109,8 @@ const defaultSection = (): BOQSectionRow => ({
 
 export function EditBOQModal({ open, onOpenChange, boq, onSuccess, company }: EditBOQModalProps) {
   const currentCompany = company;
-  const { data: customers = [] } = useCustomers(currentCompany?.id);
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
   const { data: units = [] } = useUnits(currentCompany?.id);
   const { profile } = useAuth();
 

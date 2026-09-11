@@ -18,6 +18,7 @@ import { useLPOs, useCustomers } from '@/hooks/useDatabase';
 import { useInvoicesFixed } from '@/hooks/useInvoicesFixed';
 import { useCurrentCompanyId } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 interface AuditResult {
   conflictingEntities: Array<{
@@ -50,10 +51,12 @@ export const LPOCustomerSupplierAudit = () => {
   const [showDetails, setShowDetails] = useState(false);
 
   const companyId = useCurrentCompanyId();
-  const { data: lpos } = useLPOs(companyId, { fetchAll: true });
-  const { data: customers } = useCustomers(companyId, { fetchAll: true });
+  const { data: lposResponse } = useLPOs(companyId, { fetchAll: true });
+  const lpos = toCollection(lposResponse);
+  const { data: customersResponse } = useCustomers(companyId, { fetchAll: true });
+  const customers = toCollection(customersResponse);
   const { data: invoiceResponse } = useInvoicesFixed(companyId);
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
 
   const performAudit = () => {
     if (!lpos || !customers || !invoices) {

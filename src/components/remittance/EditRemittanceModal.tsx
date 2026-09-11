@@ -26,6 +26,7 @@ import { useUpdateRemittanceAdvice, useUpdateRemittanceAdviceItems, useCustomers
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import type { RemittanceAdvice, RemittanceAdviceItem } from '@/types/remittance';
+import { toCollection } from '@/utils/collection';
 
 interface EditRemittanceModalProps {
   open: boolean;
@@ -49,7 +50,8 @@ export function EditRemittanceModal({ open, onOpenChange, remittance, onSuccess 
   const { currentCompany } = useCurrentCompany();
   const updateRemittanceMutation = useUpdateRemittanceAdvice();
   const updateItemsMutation = useUpdateRemittanceAdviceItems();
-  const { data: customers = [] } = useCustomers(currentCompany?.id);
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
 
   const [formData, setFormData] = useState({
     adviceNumber: '',

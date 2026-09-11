@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCustomers } from '@/hooks/useDatabase';
 import { lclTemplateService } from '@/services/lclTemplateService';
 import { LCLHierarchicalData, LCLTemplateStructure } from '@/types/lclTemplate';
+import { toCollection } from '@/utils/collection';
 import { LCLBOQItemEditor, LCLBOQItemEditorHandle, ItemSnapshot } from '@/components/lcl/LCLBOQItemEditor';
 import { lclBoqService, LCLBOQRecord } from '@/services/lclBoqService';
 import { generateNextBOQNumber } from '@/utils/boqNumberGenerator';
@@ -26,7 +27,8 @@ export default function LCLTemplate() {
   const { currentCompany, isLoading: isCompanyLoading } = useCurrentCompany();
   const companyId = currentCompany?.id || '';
   const { toast } = useToast();
-  const { data: customers } = useCustomers(companyId);
+  const { data: customersResponse } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
   const { loading: authLoading, isAuthenticated } = useAuth();
 
   console.log(`[LCLTemplate] Company context loaded - isLoading: ${isCompanyLoading}, companyId: "${companyId}", currentCompany: ${currentCompany ? currentCompany.name : 'null'}`);

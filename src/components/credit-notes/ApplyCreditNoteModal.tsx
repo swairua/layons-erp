@@ -29,6 +29,7 @@ import {
 import { toast } from 'sonner';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useApplyCreditNoteToInvoice, type CreditNote } from '@/hooks/useCreditNotes';
+import { toCollection } from '@/utils/collection';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ApplyCreditNoteModalProps {
@@ -49,7 +50,7 @@ export function ApplyCreditNoteModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: invoiceResponse } = useInvoices(creditNote?.company_id);
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
   const applyCreditNoteMutation = useApplyCreditNoteToInvoice();
   const { user } = useAuth();
 

@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { saveBoqDraft, loadBoqDraft, deleteDraft, isDraftStale } from '@/services/boqAutoSaveService';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { toCollection } from '@/utils/collection';
 
 // Safe UUID generator that works in all environments
 const generateSafeUUID = (): string => {
@@ -101,7 +102,8 @@ const defaultSection = (): BOQSectionRow => ({
 
 export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initialDraftToken }: CreateBOQModalProps) {
   const currentCompany = company;
-  const { data: customers = [] } = useCustomers(currentCompany?.id);
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
   const { data: units = [] } = useUnits(currentCompany?.id);
   const { data: existingBOQs = [] } = useBOQs(currentCompany?.id, 'id, number');
   const { profile, loading: authLoading } = useAuth();

@@ -7,6 +7,7 @@ import { Download, Send, X, AlertCircle, CheckCircle, Clock } from 'lucide-react
 import { usePayments, useCompanies } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
+import { toCollection } from '@/utils/collection';
 import { toast } from 'sonner';
 
 interface CustomerStatementPreviewModalProps {
@@ -36,8 +37,8 @@ export default function CustomerStatementPreviewModal({
   const { data: companies } = useCompanies();
   const { data: invoiceResponse } = useInvoices();
   const { data: paymentResponse } = usePayments();
-  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
-  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
+  const invoices = toCollection(invoiceResponse);
+  const payments = toCollection(paymentResponse);
 
   // Get customer's invoices and payments
   const customerInvoices = invoices.filter(inv => inv.customer_id === customer.customer_id);

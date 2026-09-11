@@ -41,6 +41,7 @@ import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { toCollection } from '@/utils/collection';
 
 interface QuotationItem {
   id: string;
@@ -91,8 +92,10 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
   const { currentCompany } = useCurrentCompany();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
 
