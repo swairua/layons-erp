@@ -101,8 +101,14 @@ export default function Quotations() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const quotations = quotationData?.data || [];
-  const totalQuotations = quotationData?.total || 0;
+  const quotations = Array.isArray(quotationData)
+    ? quotationData
+    : Array.isArray(quotationData?.data)
+      ? quotationData.data
+      : [];
+  const totalQuotations = Array.isArray(quotationData)
+    ? quotationData.length
+    : quotationData?.total || quotations.length;
   const deleteQuotation = useDeleteQuotation();
 
   // Set status filter from URL params

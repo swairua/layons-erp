@@ -25,7 +25,10 @@ export function DashboardSummaryCards({ onDrill }: DashboardSummaryCardsProps) {
   const companyId = currentCompany?.id;
 
   // Fetch data for all modules
-  const { data: quotations = [] } = useQuotations(companyId);
+  const { data: quotationResponse } = useQuotations(companyId);
+  const quotations = Array.isArray(quotationResponse)
+    ? quotationResponse
+    : quotationResponse?.data ?? [];
   const { data: boqs = [] } = useBOQs(companyId);
   const { data: invoices = [] } = useInvoices(companyId);
 
