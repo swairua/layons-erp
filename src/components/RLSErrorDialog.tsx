@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +45,19 @@ export function RLSErrorDialog({
   const [copied, setCopied] = useState(false);
   const [step, setStep] = useState<'initial' | 'fixing' | 'success' | 'error'>('initial');
   const [useEmergencyMode, setUseEmergencyMode] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setStep('initial');
+      setShowManualMode(false);
+      setCopied(false);
+      setUseEmergencyMode(false);
+    }
+  }, [open]);
+
+  const handleDialogChange = (isOpen: boolean) => {
+    onOpenChange(isOpen);
+  };
 
   const sqlFix = useEmergencyMode ? getEmergencyRLSDisableSQL() : `
 -- STEP 1: Disable RLS and add company_id column
@@ -144,7 +157,7 @@ COMMIT;
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={handleDialogChange}>
       <AlertDialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         {step === 'initial' && (
           <>
@@ -218,9 +231,10 @@ COMMIT;
             </div>
 
             <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
               <Button
                 variant="outline"
+                type="button"
                 onClick={() => window.location.href = '/database-fix'}
                 className="gap-2"
               >
@@ -228,6 +242,7 @@ COMMIT;
                 Go to Database Fix Page
               </Button>
               <Button
+                type="button"
                 onClick={handleAutomaticFix}
                 disabled={isApplying}
                 className="gap-2 bg-blue-600 hover:bg-blue-700"
@@ -281,7 +296,7 @@ COMMIT;
               </Alert>
             </div>
             <AlertDialogFooter>
-              <AlertDialogAction className="bg-green-600 hover:bg-green-700">
+              <AlertDialogAction type="button" className="bg-green-600 hover:bg-green-700">
                 Done
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -339,8 +354,9 @@ COMMIT;
             </div>
 
             <AlertDialogFooter className="gap-2">
-              <AlertDialogCancel>Close</AlertDialogCancel>
+              <AlertDialogCancel type="button">Close</AlertDialogCancel>
               <Button
+                type="button"
                 onClick={handleCopy}
                 variant="outline"
                 className="gap-2"
@@ -358,6 +374,7 @@ COMMIT;
                 )}
               </Button>
               <Button
+                type="button"
                 onClick={() => window.open('https://supabase.com/dashboard', '_blank')}
                 className="gap-2"
               >
