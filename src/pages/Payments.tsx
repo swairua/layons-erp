@@ -414,11 +414,11 @@ export default function Payments() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-5 w-5 text-success" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Received Today</p>
-                <p className="text-2xl font-bold text-success">{formatCurrency(totalReceivedToday)}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <DollarSign className="h-5 w-5 shrink-0 text-success" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Total Received Today</p>
+                <p className="break-all text-lg font-bold text-success sm:text-2xl">{formatCurrency(totalReceivedToday)}</p>
               </div>
             </div>
           </CardContent>
@@ -426,11 +426,11 @@ export default function Payments() {
 
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-success-light text-success">{completedThisMonth}</Badge>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Completed This Month</p>
-                <p className="text-2xl font-bold text-success">{formatCurrency(totalThisMonth)}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <Badge className="shrink-0 bg-success-light text-success">{completedThisMonth}</Badge>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Completed This Month</p>
+                <p className="break-all text-lg font-bold text-success sm:text-2xl">{formatCurrency(totalThisMonth)}</p>
               </div>
             </div>
           </CardContent>
@@ -438,11 +438,11 @@ export default function Payments() {
 
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-warning-light text-warning">0</Badge>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-warning">{formatCurrency(pendingAmount)}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <Badge className="shrink-0 bg-warning-light text-warning">0</Badge>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="break-all text-lg font-bold text-warning sm:text-2xl">{formatCurrency(pendingAmount)}</p>
               </div>
             </div>
           </CardContent>

@@ -394,11 +394,11 @@ Website: www.biolegendscientific.co.ke`;
               className={`shadow-card cursor-pointer hover:shadow-lg transition-shadow ${isActive ? 'ring-2 ring-primary' : ''}`}
               onClick={() => setStatusFilter(isActive ? 'all' : status)}
             >
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground capitalize">{status}</p>
-                  <p className="text-2xl font-bold">{count}</p>
-                  <p className="text-xs text-muted-foreground">{isActive ? 'Filtering...' : 'Click to filter'}</p>
+              <CardContent className="min-w-0 pt-6">
+                <div className="min-w-0 space-y-2">
+                  <p className="break-words text-sm font-medium text-muted-foreground capitalize">{status}</p>
+                  <p className="break-all text-lg font-bold sm:text-2xl">{count}</p>
+                  <p className="break-words text-xs text-muted-foreground">{isActive ? 'Filtering...' : 'Click to filter'}</p>
                 </div>
               </CardContent>
             </Card>

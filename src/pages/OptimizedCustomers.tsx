@@ -435,11 +435,11 @@ export default function OptimizedCustomers() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Customers</p>
-                <p className="text-2xl font-bold text-primary">
+            <div className="flex min-w-0 items-center gap-2">
+              <Users className="h-5 w-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Total Customers</p>
+                <p className="break-all text-lg font-bold text-primary sm:text-2xl">
                   {loadingStats ? '...' : stats?.totalCustomers || 0}
                 </p>
               </div>
@@ -449,11 +449,11 @@ export default function OptimizedCustomers() {
         
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Building2 className="h-5 w-5 text-success" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-success">
+            <div className="flex min-w-0 items-center gap-2">
+              <Building2 className="h-5 w-5 shrink-0 text-success" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Active</p>
+                <p className="break-all text-lg font-bold text-success sm:text-2xl">
                   {loadingStats ? '...' : stats?.activeCustomers || 0}
                 </p>
               </div>
@@ -463,11 +463,11 @@ export default function OptimizedCustomers() {
 
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <CreditCard className="h-5 w-5 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">With Credit Limit</p>
-                <p className="text-2xl font-bold text-blue-600">
+            <div className="flex min-w-0 items-center gap-2">
+              <CreditCard className="h-5 w-5 shrink-0 text-blue-500" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">With Credit Limit</p>
+                <p className="break-all text-lg font-bold text-blue-600 sm:text-2xl">
                   {loadingStats ? '...' : stats?.customersWithCreditLimit || 0}
                 </p>
               </div>
@@ -477,11 +477,11 @@ export default function OptimizedCustomers() {
 
         <Card className="shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-5 w-5 text-green-500" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Credit</p>
-                <p className="text-2xl font-bold text-green-600">
+            <div className="flex min-w-0 items-center gap-2">
+              <DollarSign className="h-5 w-5 shrink-0 text-green-500" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Total Credit</p>
+                <p className="break-all text-lg font-bold text-green-600 sm:text-2xl">
                   {loadingStats ? '...' : formatter.format(stats?.totalCreditLimit || 0)}
                 </p>
               </div>
