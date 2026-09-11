@@ -147,10 +147,10 @@ export default function Payments() {
   }, [searchParams]);
 
   // Fetch live payments data and company details
-  const { currentCompany } = useCurrentCompany();
+  const { currentCompany: company } = useCurrentCompany();
 
   const pagination = useServerPagination({ initialPageSize: 10 });
-  const { data: paymentData, isLoading, error } = usePayments(currentCompany?.id, {
+  const { data: paymentData, isLoading, error } = usePayments(company?.id, {
     page: pagination.page,
     pageSize: pagination.pageSize,
     search: pagination.debouncedSearch,
@@ -158,10 +158,10 @@ export default function Payments() {
   });
   const payments = paymentData?.data || [];
   const totalPayments = paymentData?.total || 0;
-  const { data: invoicesData } = useInvoices(currentCompany?.id, { fetchAll: false, page: 1, pageSize: 500 });
+  const { data: invoicesData } = useInvoices(company?.id, { fetchAll: false, page: 1, pageSize: 500 });
   const invoices = invoicesData?.data || [];
   const deletePayment = useDeletePayment();
-  const { data: paymentSummary } = usePaymentSummary(currentCompany?.id);
+  const { data: paymentSummary } = usePaymentSummary(company?.id);
 
 
   const handleRecordPayment = () => {
@@ -188,7 +188,7 @@ export default function Payments() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!paymentToDelete || !currentCompany?.id) {
+    if (!paymentToDelete || !company?.id) {
       toast.error('Missing required information for deletion');
       return;
     }
@@ -196,7 +196,7 @@ export default function Payments() {
     try {
       await deletePayment.mutateAsync({
         paymentId: paymentToDelete.id,
-        companyId: currentCompany.id
+        companyId: company.id
       });
       toast.success(`Payment ${paymentToDelete.payment_number} deleted successfully`);
       setShowDeleteConfirm(false);
@@ -253,18 +253,18 @@ export default function Payments() {
       };
 
       // Use the utility function with company details
-      const companyDetails = currentCompany ? {
-        name: currentCompany.name,
-        address: currentCompany.address,
-        city: currentCompany.city,
-        country: currentCompany.country,
-        phone: currentCompany.phone,
-        email: currentCompany.email,
-        tax_number: currentCompany.tax_number,
-        logo_url: currentCompany.logo_url,
-        header_image: currentCompany.header_image,
-        stamp_image: currentCompany.stamp_image,
-        company_services: currentCompany.company_services
+      const companyDetails = company ? {
+        name: company.name,
+        address: company.address,
+        city: company.city,
+        country: company.country,
+        phone: company.phone,
+        email: company.email,
+        tax_number: company.tax_number,
+        logo_url: company.logo_url,
+        header_image: company.header_image,
+        stamp_image: company.stamp_image,
+        company_services: company.company_services
       } : undefined;
 
       await generatePaymentReceiptPDF(enrichedPayment, companyDetails);
