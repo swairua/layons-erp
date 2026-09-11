@@ -131,7 +131,9 @@ const AppErrorFallback = ({ kind, error }: { kind: AppErrorKind; error: Error | 
               : 'The application encountered an unexpected error. Reload the page or return to the home page.'}
           </p>
           {import.meta.env.DEV && error?.name && (
-            <p className="text-xs text-muted-foreground">Error type: {error.name}</p>
+            <p className="text-xs text-muted-foreground">
+              Error type: {error.name}{error.message ? ` — ${error.message}` : ''}
+            </p>
           )}
         </div>
 
