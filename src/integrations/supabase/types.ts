@@ -775,6 +775,7 @@ export type Database = {
           currency: string | null
           customer_id: string | null
           discount_amount: number | null
+          display_as_percentage: boolean
           due_date: string
           exchange_rate: number | null
           id: string
@@ -800,6 +801,7 @@ export type Database = {
           currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          display_as_percentage?: boolean
           due_date: string
           exchange_rate?: number | null
           id?: string
@@ -825,6 +827,7 @@ export type Database = {
           currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          display_as_percentage?: boolean
           due_date?: string
           exchange_rate?: number | null
           id?: string
@@ -1418,6 +1421,7 @@ export type Database = {
           currency_code: string | null
           customer_id: string | null
           discount_amount: number | null
+          display_as_percentage: boolean
           exchange_rate: number | null
           id: string
           notes: string | null
@@ -1438,6 +1442,7 @@ export type Database = {
           currency_code?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          display_as_percentage?: boolean
           exchange_rate?: number | null
           id?: string
           notes?: string | null
@@ -1458,6 +1463,7 @@ export type Database = {
           currency_code?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          display_as_percentage?: boolean
           exchange_rate?: number | null
           id?: string
           notes?: string | null
@@ -1632,6 +1638,7 @@ export type Database = {
           currency: string | null
           customer_id: string | null
           discount_amount: number | null
+          display_as_percentage: boolean
           exchange_rate: number | null
           id: string
           notes: string | null
@@ -1652,6 +1659,7 @@ export type Database = {
           currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          display_as_percentage?: boolean
           exchange_rate?: number | null
           id?: string
           notes?: string | null
@@ -1672,6 +1680,7 @@ export type Database = {
           currency?: string | null
           customer_id?: string | null
           discount_amount?: number | null
+          display_as_percentage?: boolean
           exchange_rate?: number | null
           id?: string
           notes?: string | null

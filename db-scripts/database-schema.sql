@@ -133,6 +133,7 @@ CREATE TABLE quotations (
     tax_amount DECIMAL(15,2) DEFAULT 0,
     discount_amount DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) DEFAULT 0,
+    display_as_percentage BOOLEAN NOT NULL DEFAULT FALSE,
     currency VARCHAR(3) DEFAULT 'KES',
     terms_and_conditions TEXT,
     notes TEXT,
@@ -176,6 +177,7 @@ CREATE TABLE invoices (
     total_amount DECIMAL(15,2) DEFAULT 0,
     paid_amount DECIMAL(15,2) DEFAULT 0,
     balance_due DECIMAL(15,2) DEFAULT 0,
+    display_as_percentage BOOLEAN NOT NULL DEFAULT FALSE,
     currency VARCHAR(3) DEFAULT 'KES', -- Currency code: KES, USD, EUR, GBP
     terms_and_conditions TEXT,
     notes TEXT,
@@ -211,6 +213,7 @@ CREATE TABLE proforma_invoices (
     tax_amount DECIMAL(15,2) DEFAULT 0,
     discount_amount DECIMAL(15,2) DEFAULT 0,
     total_amount DECIMAL(15,2) DEFAULT 0,
+    display_as_percentage BOOLEAN NOT NULL DEFAULT FALSE,
     terms_and_conditions TEXT,
     notes TEXT,
     created_by UUID REFERENCES users(id),
