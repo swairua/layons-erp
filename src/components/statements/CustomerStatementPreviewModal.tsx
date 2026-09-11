@@ -34,12 +34,14 @@ export default function CustomerStatementPreviewModal({
   statementDate = new Date().toISOString().split('T')[0]
 }: CustomerStatementPreviewModalProps) {
   const { data: companies } = useCompanies();
-  const { data: invoices } = useInvoices();
-  const { data: payments } = usePayments();
+  const { data: invoiceResponse } = useInvoices();
+  const { data: paymentResponse } = usePayments();
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
+  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
 
   // Get customer's invoices and payments
-  const customerInvoices = invoices?.filter(inv => inv.customer_id === customer.customer_id) || [];
-  const customerPayments = payments?.filter(pay => pay.customer_id === customer.customer_id) || [];
+  const customerInvoices = invoices.filter(inv => inv.customer_id === customer.customer_id);
+  const customerPayments = payments.filter(pay => pay.customer_id === customer.customer_id);
   
   // Get outstanding invoices
   const outstandingInvoices = customerInvoices.filter(inv => 

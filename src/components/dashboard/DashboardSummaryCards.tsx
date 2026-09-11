@@ -30,7 +30,8 @@ export function DashboardSummaryCards({ onDrill }: DashboardSummaryCardsProps) {
     ? quotationResponse
     : quotationResponse?.data ?? [];
   const { data: boqs = [] } = useBOQs(companyId);
-  const { data: invoices = [] } = useInvoices(companyId);
+  const { data: invoiceResponse } = useInvoices(companyId);
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
 
   // Categorize invoices by due date status
   const categorizeInvoice = (invoice: any) => {

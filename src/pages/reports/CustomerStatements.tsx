@@ -59,8 +59,10 @@ export default function CustomerStatements() {
   const [previewCustomer, setPreviewCustomer] = useState<CustomerStatement | null>(null);
 
   const { data: customers } = useCustomers();
-  const { data: invoices } = useInvoices();
-  const { data: payments } = usePayments();
+  const { data: invoiceResponse } = useInvoices();
+  const { data: paymentResponse } = usePayments();
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
+  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
 

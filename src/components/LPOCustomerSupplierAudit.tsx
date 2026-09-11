@@ -52,7 +52,8 @@ export const LPOCustomerSupplierAudit = () => {
   const companyId = useCurrentCompanyId();
   const { data: lpos } = useLPOs(companyId, { fetchAll: true });
   const { data: customers } = useCustomers(companyId, { fetchAll: true });
-  const { data: invoices } = useInvoicesFixed(companyId);
+  const { data: invoiceResponse } = useInvoicesFixed(companyId);
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
 
   const performAudit = () => {
     if (!lpos || !customers || !invoices) {

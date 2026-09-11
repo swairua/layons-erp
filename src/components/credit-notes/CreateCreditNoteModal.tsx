@@ -83,7 +83,8 @@ export function CreateCreditNoteModal({
   const { data: customers, isLoading: loadingCustomers } = useCustomers(companyId);
   const { data: products, isLoading: loadingProducts } = useProducts(companyId);
   const { data: taxSettings } = useTaxSettings(companyId);
-  const { data: invoices } = useInvoices(companyId);
+  const { data: invoiceResponse } = useInvoices(companyId);
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
   const createCreditNoteWithItems = useCreateCreditNoteWithItems();
   const generateCreditNoteNumber = useGenerateCreditNoteNumber();
 

@@ -48,7 +48,8 @@ export function ApplyCreditNoteModal({
   const [amountToApply, setAmountToApply] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: invoices = [] } = useInvoices(creditNote?.company_id);
+  const { data: invoiceResponse } = useInvoices(creditNote?.company_id);
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
   const applyCreditNoteMutation = useApplyCreditNoteToInvoice();
   const { user } = useAuth();
 

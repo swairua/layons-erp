@@ -81,7 +81,8 @@ export const CreateDeliveryNoteModal = ({
 
   const { data: customers } = useCustomers(companyId);
   const { data: products } = useProducts(companyId);
-  const { data: invoices } = useInvoices(companyId);
+  const { data: invoiceResponse } = useInvoices(companyId);
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
   const createDeliveryNote = useCreateDeliveryNote();
 
   useEffect(() => {

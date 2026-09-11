@@ -53,7 +53,8 @@ export default function SalesReports() {
   const currentCompany = companies?.[0];
   const currency = currentCompany?.currency || 'KES';
 
-  const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
+  const { data: invoiceResponse, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
   const { data: customers, isLoading: customersLoading, error: customersError } = useCustomers(companyId);
   const { data: products, isLoading: productsLoading, error: productsError } = useProducts(companyId);
 
