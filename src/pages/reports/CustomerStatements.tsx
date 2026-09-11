@@ -28,7 +28,8 @@ import {
   FileText,
   Search
 } from 'lucide-react';
-import { useCustomers, usePayments, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, usePayments } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { toast } from 'sonner';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
@@ -59,14 +60,14 @@ export default function CustomerStatements() {
   const [showPreview, setShowPreview] = useState(false);
   const [previewCustomer, setPreviewCustomer] = useState<CustomerStatement | null>(null);
 
-  const { data: customersResponse } = useCustomers();
+  const { currentCompany } = useCurrentCompany();
+  const companyId = currentCompany?.id;
+  const { data: customersResponse } = useCustomers(companyId, { fetchAll: true });
   const customers = toCollection(customersResponse);
-  const { data: invoiceResponse } = useInvoices();
-  const { data: paymentResponse } = usePayments();
+  const { data: invoiceResponse } = useInvoices(companyId, { fetchAll: true });
+  const { data: paymentResponse } = usePayments(companyId, { fetchAll: true });
   const invoices = toCollection(invoiceResponse);
   const payments = toCollection(paymentResponse);
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
 
   // Calculate customer statements
   const calculateCustomerStatements = (): CustomerStatement[] => {

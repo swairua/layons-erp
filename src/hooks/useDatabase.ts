@@ -530,9 +530,11 @@ export const useTaxSettings = (companyId?: string) => {
 
       const { data, error } = await query;
 
+      if (error?.code === 'PGRST205') return [];
       if (error) throw error;
       return data as TaxSetting[];
     },
+    retry: false,
   });
 };
 
