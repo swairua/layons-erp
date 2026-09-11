@@ -290,7 +290,7 @@ export default function OptimizedInventory() {
           <h1 className="text-3xl font-bold text-foreground">Inventory</h1>
           <p className="text-muted-foreground">
             Manage stock levels and inventory items
-            {productsData && ` (${productsData.totalCount} items)`}
+            {productsData && ` (${productsData.total} items)`}
           </p>
         </div>
         <div className="flex items-center space-x-3">
@@ -346,7 +346,7 @@ export default function OptimizedInventory() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
                 <p className="text-2xl font-bold text-warning">
-                  {loadingStats ? '...' : stats?.lowStock || 0}
+                  {loadingStats ? '...' : stats?.lowStockItems || 0}
                 </p>
               </div>
             </div>
@@ -360,7 +360,7 @@ export default function OptimizedInventory() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Out of Stock</p>
                 <p className="text-2xl font-bold text-destructive">
-                  {loadingStats ? '...' : stats?.outOfStock || 0}
+                  {loadingStats ? '...' : stats?.outOfStockItems || 0}
                 </p>
               </div>
             </div>

@@ -38,6 +38,7 @@ import { ViewQuotationModal } from '@/components/quotations/ViewQuotationModal';
 import { EditQuotationModal } from '@/components/quotations/EditQuotationModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { downloadQuotationPDF } from '@/utils/pdfGenerator';
+import { toCollection } from '@/utils/collection';
 
 interface Quotation {
   id: string;
@@ -102,11 +103,7 @@ export default function Quotations() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const quotations = Array.isArray(quotationData)
-    ? quotationData
-    : Array.isArray(quotationData?.data)
-      ? quotationData.data
-      : [];
+  const quotations = toCollection(quotationData);
   const totalQuotations = Array.isArray(quotationData)
     ? quotationData.length
     : quotationData?.total || quotations.length;

@@ -36,6 +36,7 @@ import { CreateDeliveryNoteModal } from '@/components/delivery/CreateDeliveryNot
 import { ViewDeliveryNoteModal } from '@/components/delivery/ViewDeliveryNoteModal';
 import { useDeliveryNotes, useUpdateDeliveryNote, useCompanies } from '@/hooks/useDatabase';
 import { mapDeliveryNoteForDisplay } from '@/utils/deliveryNoteMapper';
+import { toCollection } from '@/utils/collection';
 
 
 export default function DeliveryNotes() {
@@ -54,7 +55,7 @@ export default function DeliveryNotes() {
     pageSize: pagination.pageSize,
     search: pagination.debouncedSearch,
   });
-  const deliveryNotes = dnData?.data || [];
+  const deliveryNotes = toCollection(dnData);
   const totalDeliveryNotes = dnData?.total || 0;
   const updateDeliveryNote = useUpdateDeliveryNote();
 

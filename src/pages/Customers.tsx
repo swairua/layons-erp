@@ -50,6 +50,7 @@ import { ViewCustomerModal } from '@/components/customers/ViewCustomerModal';
 import { CreateCustomerModal } from '@/components/customers/CreateCustomerModal';
 import { CreateInvoiceModal } from '@/components/invoices/CreateInvoiceModal';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
+import { toCollection } from '@/utils/collection';
 
 interface Customer {
   id: string;
@@ -94,7 +95,7 @@ export default function Customers() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const customers = customersData?.data || [];
+  const customers = toCollection(customersData);
   const totalCustomers = customersData?.total || 0;
 
   // Client-side filters for status/city/creditLimit (small dataset, applied on top of server results)

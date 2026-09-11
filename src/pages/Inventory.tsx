@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PaginationControls } from '@/components/pagination/PaginationControls';
 import { useServerPagination } from '@/hooks/useServerPagination';
+import { toCollection } from '@/utils/collection';
 import { 
   Table, 
   TableBody, 
@@ -94,7 +95,7 @@ export default function Inventory() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const products = productsData?.data || [];
+  const products = toCollection(productsData);
   const totalProducts = productsData?.total || 0;
 
   const handleAddItem = () => {

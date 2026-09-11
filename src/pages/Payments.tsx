@@ -49,6 +49,7 @@ import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generatePaymentReceiptPDF } from '@/utils/pdfGenerator';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
 import { getReceiptBalances } from '@/utils/paymentReceiptBalances';
+import { toCollection } from '@/utils/collection';
 
 interface Payment {
   id: string;
@@ -156,10 +157,10 @@ export default function Payments() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const payments = paymentData?.data || [];
+  const payments = toCollection(paymentData);
   const totalPayments = paymentData?.total || 0;
   const { data: invoicesData } = useInvoices(company?.id, { fetchAll: false, page: 1, pageSize: 500 });
-  const invoices = invoicesData?.data || [];
+  const invoices = toCollection(invoicesData);
   const deletePayment = useDeletePayment();
   const { data: paymentSummary } = usePaymentSummary(company?.id);
 
