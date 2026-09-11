@@ -7,15 +7,26 @@ import { supabase } from '@/integrations/supabase/client';
  * 2. Reverse inventory movements
  * 3. Delete the invoice
  */
-export async function handleInvoiceDelete(invoiceId: string) {
+export async function handleInvoiceDelete(invoiceId: string, companyId: string) {
   console.log('🗑️ Starting invoice deletion process for invoice:', invoiceId);
 
   try {
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .select('id, company_id')
+      .eq('id', invoiceId)
+      .eq('company_id', companyId)
+      .single();
+
+    if (invoiceError) throw new Error(`Unable to verify invoice: ${invoiceError.message}`);
+    if (!invoice) throw new Error('Invoice not found for the active company');
+
     // Step 1: Check if this invoice came from a BOQ
     const { data: boqRecord, error: boqError } = await supabase
       .from('boqs')
       .select('id, company_id, status')
       .eq('converted_to_invoice_id', invoiceId)
+      .eq('company_id', companyId)
       .single();
 
     let boqWasReversed = false;
@@ -30,25 +41,25 @@ export async function handleInvoiceDelete(invoiceId: string) {
           converted_to_invoice_id: null,
           converted_at: null
         })
-        .eq('id', boqRecord.id);
+        .eq('id', boqRecord.id)
+        .eq('company_id', companyId);
 
       if (reverseError) {
-        console.error('⚠️ Failed to reverse BOQ status:', reverseError);
-        // Don't throw - continue with invoice deletion
+        throw new Error(`Failed to reverse BOQ status: ${reverseError.message}`);
       } else {
         console.log('✅ BOQ status reversed to draft');
         boqWasReversed = true;
       }
     } else if (boqError && boqError.code !== 'PGRST116') {
-      // PGRST116 means no rows found - which is expected if invoice wasn't from BOQ
-      console.warn('⚠️ Error checking for related BOQ:', boqError);
+      throw new Error(`Failed to check related BOQ: ${boqError.message}`);
     }
 
     // Step 1.5: Delete all delivery notes related to this invoice
     const { data: deliveryNotes, error: deliveryError } = await supabase
       .from('delivery_notes')
       .select('id')
-      .eq('invoice_id', invoiceId);
+      .eq('invoice_id', invoiceId)
+      .eq('company_id', companyId);
 
     if (deliveryNotes && deliveryNotes.length > 0) {
       console.log('🚚 Found', deliveryNotes.length, 'delivery notes to delete');
@@ -57,7 +68,8 @@ export async function handleInvoiceDelete(invoiceId: string) {
       const { error: deleteDeliveryError } = await supabase
         .from('delivery_notes')
         .delete()
-        .eq('invoice_id', invoiceId);
+        .eq('invoice_id', invoiceId)
+        .eq('company_id', companyId);
 
       if (deleteDeliveryError) {
         console.error('⚠️ Failed to delete delivery notes:', deleteDeliveryError);
@@ -65,8 +77,8 @@ export async function handleInvoiceDelete(invoiceId: string) {
       }
 
       console.log('✅ Delivery notes deleted');
-    } else if (deliveryError && deliveryError.code !== 'PGRST116') {
-      console.warn('⚠️ Error checking for related delivery notes:', deliveryError);
+    } else if (deliveryError) {
+      throw new Error(`Failed to check delivery notes: ${deliveryError.message}`);
     }
 
     // Step 2: Find and reverse all stock movements for this invoice
@@ -74,7 +86,12 @@ export async function handleInvoiceDelete(invoiceId: string) {
       .from('stock_movements')
       .select('id, product_id, movement_type, quantity, company_id')
       .eq('reference_type', 'INVOICE')
-      .eq('reference_id', invoiceId);
+      .eq('reference_id', invoiceId)
+      .eq('company_id', companyId);
+
+    if (stockError) {
+      throw new Error(`Failed to check stock movements: ${stockError.message}`);
+    }
 
     let inventoryReversed = false;
     if (stockMovements && stockMovements.length > 0) {
@@ -97,8 +114,7 @@ export async function handleInvoiceDelete(invoiceId: string) {
         .insert(reverseMovements);
 
       if (insertError) {
-        console.error('⚠️ Failed to create reverse stock movements:', insertError);
-        // Don't throw - continue with invoice deletion
+        throw new Error(`Failed to create reverse stock movements: ${insertError.message}`);
       } else {
         // Update product stock for each reversal using the RPC function
         try {
@@ -117,25 +133,28 @@ export async function handleInvoiceDelete(invoiceId: string) {
             console.log('✅ All product stock levels updated');
             inventoryReversed = true;
           } else {
-            console.warn(`⚠️ ${failed} of ${results.length} stock updates failed`);
+            throw new Error(`${failed} of ${results.length} product stock updates failed`);
           }
         } catch (err) {
-          console.error('⚠️ Error updating product stock:', err);
-          // Don't throw - inventory might be off but invoice deletion should proceed
+          throw err;
         }
       }
     }
 
     // Step 3: Delete the invoice (Supabase will cascade delete invoice_items automatically)
-    const { error: deleteError } = await supabase
+    const { data: deletedInvoice, error: deleteError } = await supabase
       .from('invoices')
       .delete()
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .eq('company_id', companyId)
+      .select('id')
+      .maybeSingle();
 
     if (deleteError) {
       console.error('❌ Failed to delete invoice:', deleteError);
       throw new Error(`Failed to delete invoice: ${deleteError.message}`);
     }
+    if (!deletedInvoice) throw new Error('Invoice was not deleted');
 
     console.log('✅ Invoice deleted successfully');
 

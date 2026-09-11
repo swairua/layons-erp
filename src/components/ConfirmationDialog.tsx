@@ -49,10 +49,11 @@ export function ConfirmationDialog({
           )}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>
+          <AlertDialogCancel type="button" disabled={isLoading}>
             {cancelText}
           </AlertDialogCancel>
           <AlertDialogAction
+            type="button"
             onClick={onConfirm}
             disabled={isLoading}
             className={isDangerous ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}

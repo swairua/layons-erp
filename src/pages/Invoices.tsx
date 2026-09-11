@@ -178,21 +178,16 @@ export default function Invoices() {
   const handleDeleteConfirm = async () => {
     if (!deleteDialog.invoice || !currentCompany?.id) return;
     try {
-      await deleteInvoice.mutateAsync(deleteDialog.invoice.id);
+      await deleteInvoice.mutateAsync({
+        id: deleteDialog.invoice.id,
+        companyId: currentCompany.id,
+      });
 
-      // Log the delete action
-      await logDelete(
-        currentCompany.id,
-        'invoice',
-        deleteDialog.invoice.id,
-        deleteDialog.invoice.invoice_number,
-        deleteDialog.invoice.invoice_number,
-        {
-          customerName: deleteDialog.invoice.customers?.name,
-          totalAmount: deleteDialog.invoice.total_amount,
-          deletedAt: new Date().toISOString(),
-        }
-      );
+      void logDelete(currentCompany.id, 'invoice', deleteDialog.invoice.id, {
+        invoiceNumber: deleteDialog.invoice.invoice_number,
+        customerName: deleteDialog.invoice.customers?.name,
+        totalAmount: deleteDialog.invoice.total_amount,
+      });
 
       toast.success('Invoice deleted successfully');
       refetch();
@@ -1075,6 +1070,8 @@ Website:`;
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteDialog({ open: false })}
         confirmText="Delete"
+        isLoading={deleteInvoice.isPending}
+        loadingText="Deleting..."
       />
 
       <RLSErrorDialog
