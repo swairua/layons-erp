@@ -44,6 +44,7 @@ const ReportsOverview = lazyWithRetry(() => import("./pages/reports/ReportsOverv
 const SalesReports = lazyWithRetry(() => import("./pages/reports/SalesReports"));
 const InventoryReports = lazyWithRetry(() => import("./pages/reports/InventoryReports"));
 const StatementOfAccounts = lazyWithRetry(() => import("./pages/reports/StatementOfAccounts"));
+const CustomerStatements = lazyWithRetry(() => import("./pages/reports/CustomerStatements"));
 const CompanySettings = lazyWithRetry(() => import("./pages/settings/CompanySettings"));
 const UserManagement = lazyWithRetry(() => import("./pages/settings/UserManagement"));
 const UserPermissions = lazyWithRetry(() => import("./pages/settings/UserPermissions"));
@@ -483,6 +484,16 @@ const App = () => {
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
                 <ProtectedRoute requiredFeature="reports-statements">
                   <StatementOfAccounts />
+                </ProtectedRoute>
+              </Suspense>
+            }
+          />
+          <Route
+            path="/reports/customer-statements"
+            element={
+              <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+                <ProtectedRoute requiredFeature="reports-statements">
+                  <CustomerStatements />
                 </ProtectedRoute>
               </Suspense>
             }
