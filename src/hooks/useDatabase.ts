@@ -1915,7 +1915,7 @@ export const useQuotations = (
           .select(`
             id, company_id, customer_id, quotation_number, quotation_date,
             valid_until, status, subtotal, tax_amount, total_amount,
-            notes, terms_and_conditions, created_at, updated_at
+            currency, exchange_rate, notes, terms_and_conditions, created_at, updated_at
           `, { count: fetchAll ? undefined : 'exact' })
           .eq('company_id', companyId)
           .neq('status', 'deleted')

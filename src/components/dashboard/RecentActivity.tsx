@@ -2,8 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { usePayments, useRemittanceAdvice, useCompanies } from '@/hooks/useDatabase';
+import { usePayments, useRemittanceAdvice } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface Activity {
@@ -48,8 +50,7 @@ function getTypeIcon(type: Activity['type']) {
 }
 
 export function RecentActivity() {
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
+  const { currentCompany } = useCurrentCompany();
   const { data: invoiceResponse, isLoading: invoicesLoading } = useInvoices(currentCompany?.id);
   const { data: paymentResponse, isLoading: paymentsLoading } = usePayments(currentCompany?.id);
   const { data: remittanceResponse, isLoading: remittancesLoading } = useRemittanceAdvice(currentCompany?.id);
@@ -59,14 +60,8 @@ export function RecentActivity() {
 
   const isLoading = invoicesLoading || paymentsLoading || remittancesLoading;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number, currency?: string | null) =>
+    formatCurrencyUtil(amount, currency);
 
   // Combine all activities
   const activities: Activity[] = [];
@@ -79,7 +74,7 @@ export function RecentActivity() {
         type: 'invoice',
         title: `Invoice ${invoice.invoice_number}`,
         customer: invoice.customers?.name || 'Unknown Customer',
-        amount: formatCurrency(invoice.total_amount || 0),
+        amount: formatCurrency(invoice.total_amount || 0, invoice.currency),
         status: invoice.status as Activity['status'],
         timestamp: new Date(invoice.created_at || '')
       });
@@ -94,7 +89,7 @@ export function RecentActivity() {
         type: 'payment',
         title: `Payment ${payment.payment_number}`,
         customer: payment.customers?.name || 'Unknown Customer',
-        amount: formatCurrency(payment.amount || 0),
+        amount: formatCurrency(payment.amount || 0, payment.currency),
         status: 'completed',
         timestamp: new Date(payment.created_at || '')
       });
@@ -109,7 +104,7 @@ export function RecentActivity() {
         type: 'remittance',
         title: `Remittance ${remittance.advice_number}`,
         customer: remittance.customers?.name || 'Unknown Customer',
-        amount: formatCurrency(remittance.total_payment || 0),
+        amount: formatCurrency(remittance.total_payment || 0, remittance.currency),
         status: remittance.status as Activity['status'],
         timestamp: new Date(remittance.created_at || '')
       });

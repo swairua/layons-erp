@@ -43,7 +43,8 @@ import {
   ChevronUp,
   FileText
 } from 'lucide-react';
-import { usePayments, useCompanies, useDeletePayment, usePaymentSummary } from '@/hooks/useDatabase';
+import { usePayments, useDeletePayment, usePaymentSummary } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generatePaymentReceiptPDF } from '@/utils/pdfGenerator';
 import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
@@ -146,8 +147,7 @@ export default function Payments() {
   }, [searchParams]);
 
   // Fetch live payments data and company details
-  const { data: companies = [] } = useCompanies();
-  const currentCompany = companies.length > 0 ? companies[0] : undefined;
+  const { currentCompany } = useCurrentCompany();
 
   const pagination = useServerPagination({ initialPageSize: 10 });
   const { data: paymentData, isLoading, error } = usePayments(currentCompany?.id, {

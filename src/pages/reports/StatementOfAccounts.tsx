@@ -26,7 +26,8 @@ import {
 } from 'lucide-react';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
-import { useCustomers, usePayments, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, usePayments } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 
 // Helper function to compute customer statements from real data
@@ -145,8 +146,7 @@ const StatementOfAccounts = () => {
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
 
   // Real data hooks
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
+  const { currentCompany } = useCurrentCompany();
   const { data: customers } = useCustomers(currentCompany?.id);
   const { data: invoiceResponse } = useInvoices(currentCompany?.id);
   const { data: paymentResponse } = usePayments(currentCompany?.id);

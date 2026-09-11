@@ -32,7 +32,8 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { useCustomers, useProducts, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -84,8 +85,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [newSectionName, setNewSectionName] = useState('');
   const [previewItem, setPreviewItem] = useState<{ sectionId: string; itemId: string } | null>(null);
 
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
+  const { currentCompany } = useCurrentCompany();
   const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
   const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
@@ -99,7 +99,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       setSelectedCustomerId(quotation.customers?.id || '');
       setQuotationDate(quotation.quotation_date || '');
       setValidUntil(quotation.valid_until || '');
-      setCurrency(quotation.currency || 'KES');
+      setCurrency(quotation.currency || currentCompany?.currency || 'KES');
       setNotes(quotation.notes || '');
       setTermsAndConditions(quotation.terms_and_conditions || '');
 
@@ -138,7 +138,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
       const initialSections = Array.from(sectionMap.values());
       setSections(initialSections.length > 0 ? initialSections : []);
     }
-  }, [quotation, open]);
+  }, [quotation, open, currentCompany?.currency]);
 
   const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||

@@ -22,7 +22,8 @@ import {
   Send
 } from 'lucide-react';
 import { BiolegendLogo } from '@/components/ui/biolegend-logo';
-import { useCompanies } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
 
 interface ViewQuotationModalProps {
   open: boolean;
@@ -42,28 +43,12 @@ export function ViewQuotationModal({
   onSend
 }: ViewQuotationModalProps) {
   // Get company data for logo
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
+  const { currentCompany } = useCurrentCompany();
 
   if (!quotation) return null;
 
-  const formatCurrency = (amount: number, currency: string = 'KES') => {
-    const localeMap: { [key: string]: string } = {
-      'KES': 'en-KE',
-      'USD': 'en-US',
-      'EUR': 'en-GB',
-      'GBP': 'en-GB',
-      'JPY': 'ja-JP',
-      'INR': 'en-IN',
-    };
-
-    return new Intl.NumberFormat(localeMap[currency] || 'en-KE', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number, currency?: string | null) =>
+    formatCurrencyUtil(amount, currency);
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('en-GB', {

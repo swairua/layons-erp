@@ -32,7 +32,8 @@ import {
   ChevronUp,
   Loader2
 } from 'lucide-react';
-import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -89,12 +90,17 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
+  const { currentCompany } = useCurrentCompany();
   const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
   const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (open && currentCompany?.currency && currency === 'KES') {
+      setCurrency(currentCompany.currency);
+    }
+  }, [open, currentCompany?.currency]);
 
   useEffect(() => {
     if (!rateLoading && fetchedRate > 0) {

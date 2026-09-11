@@ -37,9 +37,10 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { useCustomers, useProducts, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, useProducts } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
-import { useCurrentCompanyId } from '@/contexts/CompanyContext';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { getCurrencySymbol } from '@/utils/currencyFormatter';
 import { toast } from 'sonner';
 
 export default function SalesReports() {
@@ -48,10 +49,9 @@ export default function SalesReports() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const companyId = useCurrentCompanyId();
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
-  const currency = currentCompany?.currency || 'KES';
+  const { currentCompany } = useCurrentCompany();
+  const companyId = currentCompany?.id;
+  const currency = getCurrencySymbol(currentCompany?.currency);
 
   const { data: invoiceResponse, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
   const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
