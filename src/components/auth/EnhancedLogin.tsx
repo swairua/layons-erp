@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { toast } from '@/utils/safeToast';
 import { handleAuthError } from '@/utils/authErrorHandler';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export function EnhancedLogin() {
@@ -55,8 +55,8 @@ export function EnhancedLogin() {
         handleAuthError(error);
         setSubmitting(false);
       } else if (session?.user) {
-        console.info('[EnhancedLogin] Session confirmed; navigating to destination route');
-        navigate(location.pathname || '/', { replace: true });
+        console.info('[EnhancedLogin] Session confirmed; navigating to home');
+        navigate('/', { replace: true });
         setSubmitting(false);
       } else {
         console.error('[EnhancedLogin] Sign-in completed without a session');

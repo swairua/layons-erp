@@ -2117,20 +2117,19 @@ export const useDeleteInvoice = () => {
         const result = await handleInvoiceDelete(id, companyId);
         return result;
       } catch (err) {
-        // Check if this is an RLS policy issue
         const error = err as any;
-        const fullError = JSON.stringify(error);
         const msgLower = (error?.message || '').toLowerCase();
 
-        if (msgLower.includes('company_id') ||
-            msgLower.includes('has no field') ||
-            msgLower.includes('policy') ||
-            msgLower.includes('permission denied') ||
-            msgLower.includes('insufficient privilege') ||
-            msgLower.includes('does not exist')) {
+        console.error('Invoice delete error:', error);
+
+        const isTrueRLS =
+          msgLower.includes('row level security') ||
+          msgLower.includes('violates policy') ||
+          msgLower.includes('permission denied') ||
+          msgLower.includes('insufficient privilege');
+
+        if (isTrueRLS) {
           console.error('🔧 RLS Policy Issue Detected');
-          console.error('Error details:', error);
-          // Throw a special RLS error that will trigger the fix dialog
           throw new RLSPolicyError(
             `Unable to delete invoice due to RLS policy issue: ${error.message}`,
             true

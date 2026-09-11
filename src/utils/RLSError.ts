@@ -27,13 +27,12 @@ export function isRLSError(error: unknown): error is RLSPolicyError {
     return true;
   }
   
-  // Fallback: check error message content
   if (error instanceof Error) {
     const msg = error.message.toLowerCase();
-    return msg.includes('company_id') || 
-           msg.includes('policy') || 
-           msg.includes('does not exist') ||
-           msg.includes('rls');
+    return msg.includes('row level security') || 
+           msg.includes('violates policy') ||
+           msg.includes('permission denied') ||
+           msg.includes('insufficient privilege');
   }
   
   return false;
