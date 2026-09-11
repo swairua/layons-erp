@@ -52,7 +52,10 @@ export function RecentActivity() {
   const currentCompany = companies?.[0];
   const { data: invoices, isLoading: invoicesLoading } = useInvoices(currentCompany?.id);
   const { data: payments, isLoading: paymentsLoading } = usePayments(currentCompany?.id);
-  const { data: remittances, isLoading: remittancesLoading } = useRemittanceAdvice(currentCompany?.id);
+  const { data: remittanceResponse, isLoading: remittancesLoading } = useRemittanceAdvice(currentCompany?.id);
+  const remittances = Array.isArray(remittanceResponse)
+    ? remittanceResponse
+    : remittanceResponse?.data ?? [];
 
   const isLoading = invoicesLoading || paymentsLoading || remittancesLoading;
 
