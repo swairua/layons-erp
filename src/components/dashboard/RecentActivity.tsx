@@ -50,12 +50,12 @@ function getTypeIcon(type: Activity['type']) {
 export function RecentActivity() {
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: invoices, isLoading: invoicesLoading } = useInvoices(currentCompany?.id);
-  const { data: payments, isLoading: paymentsLoading } = usePayments(currentCompany?.id);
+  const { data: invoiceResponse, isLoading: invoicesLoading } = useInvoices(currentCompany?.id);
+  const { data: paymentResponse, isLoading: paymentsLoading } = usePayments(currentCompany?.id);
   const { data: remittanceResponse, isLoading: remittancesLoading } = useRemittanceAdvice(currentCompany?.id);
-  const remittances = Array.isArray(remittanceResponse)
-    ? remittanceResponse
-    : remittanceResponse?.data ?? [];
+  const invoices = Array.isArray(invoiceResponse) ? invoiceResponse : invoiceResponse?.data ?? [];
+  const payments = Array.isArray(paymentResponse) ? paymentResponse : paymentResponse?.data ?? [];
+  const remittances = Array.isArray(remittanceResponse) ? remittanceResponse : remittanceResponse?.data ?? [];
 
   const isLoading = invoicesLoading || paymentsLoading || remittancesLoading;
 
