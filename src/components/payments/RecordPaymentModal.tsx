@@ -71,6 +71,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   const [allocationFailed, setAllocationFailed] = useState(false);
   const [currency, setCurrency] = useState('KES');
   const [exchangeRate, setExchangeRate] = useState<number>(1);
+  const { currentCompany } = useCurrentCompany();
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
 
   useEffect(() => {
@@ -87,7 +88,6 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   }, [open]);
 
   // Fetch all available invoices for selection
-  const { currentCompany } = useCurrentCompany();
   const { profile } = useAuth();
   const { data: invoiceResponse } = useInvoices(currentCompany?.id);
   const invoices = toCollection(invoiceResponse);
