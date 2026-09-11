@@ -1,4 +1,7 @@
-import { supabase } from '@/integrations/supabase/client';
+import {
+  supabase,
+  SUPABASE_PUBLISHABLE_KEY,
+} from '@/integrations/supabase/client';
 
 /**
  * Safe SQL executor that handles multiple RPC methods and edge cases
@@ -85,13 +88,14 @@ export async function executeSqlSafely(sql: string): Promise<ExecutionResult> {
   // Method 4: Try direct query (might work in some setups)
   try {
     console.log('Trying direct Supabase query');
-    // This is a workaround that might not work but worth trying
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token || SUPABASE_PUBLISHABLE_KEY;
     const result = await fetch(`${supabase.supabaseUrl}/rest/v1/rpc/exec_sql`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabase.auth.session?.access_token || ''}`,
-        'apikey': supabase.auth.getSession().then(s => s?.session?.access_token || '').catch(() => ''),
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify({ sql }),
     });
@@ -104,6 +108,9 @@ export async function executeSqlSafely(sql: string): Promise<ExecutionResult> {
         method: 'direct_fetch',
       };
     }
+
+    const responseText = await result.text();
+    console.warn(`Direct SQL execution failed (${result.status}):`, responseText);
   } catch (err) {
     console.warn('Direct fetch attempt failed:', (err as Error).message);
   }
@@ -112,8 +119,8 @@ export async function executeSqlSafely(sql: string): Promise<ExecutionResult> {
   console.error('❌ All SQL execution methods failed');
   return {
     success: false,
-    message: 'Could not execute SQL. All RPC methods are unavailable.',
-    details: 'Please run the SQL manually in Supabase SQL Editor',
+    message: 'Could not execute SQL automatically. The database SQL RPC is unavailable or denied.',
+    details: 'Use the supplied SQL in the Supabase SQL Editor with an authorized database role.',
   };
 }
 
