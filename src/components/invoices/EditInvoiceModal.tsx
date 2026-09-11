@@ -88,7 +88,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const { currentCompany } = useCurrentCompany();
   const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
   const customers = toCollection(customersResponse);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const updateInvoiceWithItems = useUpdateInvoiceWithItems();
 
