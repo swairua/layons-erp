@@ -52,15 +52,15 @@ function StatCard({
 }) {
   return (
     <Card className={cn('shadow-card', alert && 'border-l-4 border-l-warning')}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <CardHeader className="flex min-w-0 flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="min-w-0 text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Icon className={cn('h-4 w-4', alert ? 'text-warning' : 'text-muted-foreground')} />
       </CardHeader>
-      <CardContent>
+      <CardContent className="min-w-0">
         {loading ? (
-          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="mb-2 h-8 w-32 max-w-full" />
         ) : (
-          <div className="text-2xl font-bold">{value || 'Ksh 0'}</div>
+          <div className="break-words text-xl font-bold sm:text-2xl">{value || 'Ksh 0'}</div>
         )}
         {change && (
           <div className="flex items-center text-xs text-muted-foreground mt-1">
@@ -85,13 +85,13 @@ function StatCard({
 
 function MiniStat({ label, value, icon: Icon }: { label: string; value: string | number; icon: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
         <Icon className="h-5 w-5 text-muted-foreground" />
       </div>
-      <div>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-lg font-semibold">{value}</p>
+      <div className="min-w-0">
+        <p className="break-words text-sm text-muted-foreground">{label}</p>
+        <p className="break-words text-base font-semibold sm:text-lg">{value}</p>
       </div>
     </div>
   );

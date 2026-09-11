@@ -108,12 +108,12 @@ export function DashboardSummaryCards({ onDrill }: DashboardSummaryCardsProps) {
       >
         <CardContent className="pt-6">
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Icon className={cn("h-5 w-5", classes.icon)} />
-                <p className={cn("text-sm font-medium", classes.text)}>{title}</p>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-1 items-center space-x-2">
+                <Icon className={cn("h-5 w-5 shrink-0", classes.icon)} />
+                <p className={cn("min-w-0 break-words text-sm font-medium", classes.text)}>{title}</p>
               </div>
-              <Badge className={cn("text-lg font-bold px-3 py-1", classes.badge)}>
+              <Badge className={cn("shrink-0 whitespace-nowrap px-2 py-1 text-base font-bold sm:px-3 sm:text-lg", classes.badge)}>
                 {count}
               </Badge>
             </div>

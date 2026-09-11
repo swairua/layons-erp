@@ -18,8 +18,8 @@ function StatCard({ title, value, change, changeType, icon: Icon, alert }: StatC
       "shadow-card hover:shadow-dropdown transition-smooth",
       alert && "border-l-4 border-l-warning"
     )}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+      <CardHeader className="flex min-w-0 flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="min-w-0 text-sm font-medium text-muted-foreground">
           {title}
         </CardTitle>
         <Icon className={cn(
@@ -27,8 +27,8 @@ function StatCard({ title, value, change, changeType, icon: Icon, alert }: StatC
           alert ? "text-warning" : "text-muted-foreground"
         )} />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
+      <CardContent className="min-w-0">
+        <div className="break-words text-xl font-bold sm:text-2xl">{value}</div>
         {change && (
           <div className="flex items-center text-xs text-muted-foreground mt-1">
             {changeType === 'increase' && (
