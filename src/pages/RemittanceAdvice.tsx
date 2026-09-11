@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { downloadRemittancePDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
-import { useRemittanceAdvice, useCompanies } from '@/hooks/useDatabase';
+import { useRemittanceAdvice } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { CreateRemittanceModal } from '@/components/remittance/CreateRemittanceModalFixed';
 import { ViewRemittanceModal } from '@/components/remittance/ViewRemittanceModal';
 import { EditRemittanceModal } from '@/components/remittance/EditRemittanceModal';
@@ -41,7 +42,8 @@ const RemittanceAdvice = () => {
 
   // Fetch live remittance advice data and company details
   const pagination = useServerPagination({ initialPageSize: 10 });
-  const { data: remData, isLoading, error } = useRemittanceAdvice(undefined, {
+  const { currentCompany } = useCurrentCompany();
+  const { data: remData, isLoading, error } = useRemittanceAdvice(currentCompany?.id, {
     page: pagination.page,
     pageSize: pagination.pageSize,
     search: pagination.debouncedSearch,
@@ -49,10 +51,6 @@ const RemittanceAdvice = () => {
   });
   const remittances = remData?.data || [];
   const totalRemittances = remData?.total || 0;
-  const { data: companies = [] } = useCompanies();
-
-  // Get the current company (assuming first company for now)
-  const currentCompany = companies[0];
 
   const handleViewRemittance = (remittance: any) => {
     setSelectedRemittance(remittance);

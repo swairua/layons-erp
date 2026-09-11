@@ -26,8 +26,10 @@ import {
 } from 'lucide-react';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { toast } from 'sonner';
-import { useCustomers, usePayments, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, usePayments } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
+import { toCollection } from '@/utils/collection';
 
 // Helper function to compute customer statements from real data
 const computeCustomerStatements = (customers: any[], invoices: any[], payments: any[]) => {
@@ -145,14 +147,16 @@ const StatementOfAccounts = () => {
   const [showOverdueOnly, setShowOverdueOnly] = useState(false);
 
   // Real data hooks
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
-  const { data: customers } = useCustomers(currentCompany?.id);
-  const { data: invoices } = useInvoices(currentCompany?.id);
-  const { data: payments } = usePayments(currentCompany?.id);
+  const { currentCompany } = useCurrentCompany();
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: invoiceResponse } = useInvoices(currentCompany?.id);
+  const { data: paymentResponse } = usePayments(currentCompany?.id);
+  const invoices = toCollection(invoiceResponse);
+  const payments = toCollection(paymentResponse);
 
   // Compute statements from real data
-  const computedStatements = computeCustomerStatements(customers || [], invoices || [], payments || []);
+  const computedStatements = computeCustomerStatements(customers || [], invoices, payments);
 
   const handleDownloadStatement = async (statement: any) => {
     try {

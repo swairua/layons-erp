@@ -14,6 +14,7 @@ import { useQuotations, useBOQs } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useCompanies } from '@/hooks/useDatabase';
 import { cn } from '@/lib/utils';
+import { toCollection } from '@/utils/collection';
 
 interface DashboardSummaryCardsProps {
   onDrill?: (module: string, filterType: string) => void;
@@ -25,9 +26,11 @@ export function DashboardSummaryCards({ onDrill }: DashboardSummaryCardsProps) {
   const companyId = currentCompany?.id;
 
   // Fetch data for all modules
-  const { data: quotations = [] } = useQuotations(companyId);
+  const { data: quotationResponse } = useQuotations(companyId);
+  const quotations = toCollection(quotationResponse);
   const { data: boqs = [] } = useBOQs(companyId);
-  const { data: invoices = [] } = useInvoices(companyId);
+  const { data: invoiceResponse } = useInvoices(companyId);
+  const invoices = toCollection(invoiceResponse);
 
   // Categorize invoices by due date status
   const categorizeInvoice = (invoice: any) => {

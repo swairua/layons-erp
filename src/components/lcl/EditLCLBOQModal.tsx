@@ -25,6 +25,7 @@ import { useCustomers } from '@/hooks/useDatabase';
 import { downloadLCLBOQPDF } from '@/utils/lclBoqPdfGenerator';
 import { LCLHierarchicalData, LCLTemplateStructure } from '@/types/lclTemplate';
 import { formatNumberWithoutTrailingZeros } from '@/utils/numberFormatter';
+import { toCollection } from '@/utils/collection';
 
 interface EditLCLBOQModalProps {
   isOpen: boolean;
@@ -81,7 +82,8 @@ export function EditLCLBOQModal({
   };
   const { toast } = useToast();
   const { currentCompany } = useCurrentCompany();
-  const { data: customers } = useCustomers(currentCompany?.id || '');
+  const { data: customersResponse } = useCustomers(currentCompany?.id || '');
+  const customers = toCollection(customersResponse);
 
   // Helper function to get section name from template or items snapshot
   const getSectionNameFromTemplate = (sectionId: string): string | undefined => {

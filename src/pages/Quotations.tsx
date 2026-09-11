@@ -27,7 +27,9 @@ import {
   Send,
   Trash2
 } from 'lucide-react';
-import { useQuotations, useCompanies, useDeleteQuotation } from '@/hooks/useDatabase';
+import { useQuotations, useDeleteQuotation } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/currencyFormatter';
 import { useConvertQuotationToInvoice } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -91,8 +93,7 @@ export default function Quotations() {
   const [autoDownloadTriggered, setAutoDownloadTriggered] = useState(false);
 
   const { profile, loading: authLoading } = useAuth();
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
+  const { currentCompany } = useCurrentCompany();
 
   const pagination = useServerPagination({ initialPageSize: 10 });
   const { data: quotationData, isLoading, error, refetch } = useQuotations(currentCompany?.id, {
@@ -101,8 +102,14 @@ export default function Quotations() {
     search: pagination.debouncedSearch,
     fetchAll: false,
   });
-  const quotations = quotationData?.data || [];
-  const totalQuotations = quotationData?.total || 0;
+  const quotations = Array.isArray(quotationData)
+    ? quotationData
+    : Array.isArray(quotationData?.data)
+      ? quotationData.data
+      : [];
+  const totalQuotations = Array.isArray(quotationData)
+    ? quotationData.length
+    : quotationData?.total || quotations.length;
   const deleteQuotation = useDeleteQuotation();
 
   // Set status filter from URL params
@@ -134,23 +141,8 @@ export default function Quotations() {
     }
   };
 
-  const formatCurrency = (amount: number, currency: string = 'KES') => {
-    const localeMap: { [key: string]: string } = {
-      'KES': 'en-KE',
-      'USD': 'en-US',
-      'EUR': 'en-GB',
-      'GBP': 'en-GB',
-      'JPY': 'ja-JP',
-      'INR': 'en-IN',
-    };
-
-    return new Intl.NumberFormat(localeMap[currency] || 'en-KE', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number, currency?: string | null) =>
+    formatCurrencyUtil(amount, currency);
 
   const filteredQuotations = quotations.filter(quotation => {
     const matchesStatus = statusFilter === 'all' || quotation.status === statusFilter;

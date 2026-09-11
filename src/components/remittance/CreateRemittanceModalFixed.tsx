@@ -25,6 +25,7 @@ import { useCreateRemittanceAdvice, useCustomers, useGenerateDocumentNumber } fr
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import type { RemittanceAdviceItemFormData } from '@/types/remittance';
+import { toCollection } from '@/utils/collection';
 
 interface CreateRemittanceModalProps {
   open: boolean;
@@ -46,7 +47,8 @@ export function CreateRemittanceModal({ open, onOpenChange, onSuccess }: CreateR
   const { profile } = useAuth();
   const { currentCompany } = useCurrentCompany();
   const createRemittanceMutation = useCreateRemittanceAdvice();
-  const { data: customers = [] } = useCustomers(currentCompany?.id);
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
   const generateNumberMutation = useGenerateDocumentNumber();
 
   const [formData, setFormData] = useState({

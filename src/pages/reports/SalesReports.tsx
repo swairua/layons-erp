@@ -37,10 +37,12 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { useCustomers, useProducts, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, useProducts } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
-import { useCurrentCompanyId } from '@/contexts/CompanyContext';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
+import { getCurrencySymbol } from '@/utils/currencyFormatter';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 export default function SalesReports() {
   const [dateRange, setDateRange] = useState('last_30_days');
@@ -48,14 +50,16 @@ export default function SalesReports() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const companyId = useCurrentCompanyId();
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
-  const currency = currentCompany?.currency || 'KES';
+  const { currentCompany } = useCurrentCompany();
+  const companyId = currentCompany?.id;
+  const currency = getCurrencySymbol(currentCompany?.currency);
 
-  const { data: invoices, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
-  const { data: customers, isLoading: customersLoading, error: customersError } = useCustomers(companyId);
-  const { data: products, isLoading: productsLoading, error: productsError } = useProducts(companyId);
+  const { data: invoiceResponse, isLoading: invoicesLoading, error: invoicesError } = useInvoices(companyId);
+  const invoices = toCollection(invoiceResponse);
+  const { data: customersResponse, isLoading: customersLoading, error: customersError } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: productsLoading, error: productsError } = useProducts(companyId);
+  const products = toCollection(productsResponse);
 
   const isLoading = invoicesLoading || customersLoading || productsLoading;
   const hasError = invoicesError || customersError || productsError;

@@ -17,8 +17,8 @@ export type CurrencyCode = keyof typeof SUPPORTED_CURRENCIES;
  * @param currency Currency code (KES, USD, EUR). Defaults to KES
  * @returns Formatted currency string
  */
-export const formatCurrency = (amount: number, currency: string = 'KES'): string => {
-  const currencyData = SUPPORTED_CURRENCIES[currency as CurrencyCode] || SUPPORTED_CURRENCIES.KES;
+export const formatCurrency = (amount: number, currency?: string | null): string => {
+  const currencyData = SUPPORTED_CURRENCIES[(currency || 'KES') as CurrencyCode] || SUPPORTED_CURRENCIES.KES;
   
   try {
     return new Intl.NumberFormat(currencyData.locale, {
@@ -36,16 +36,16 @@ export const formatCurrency = (amount: number, currency: string = 'KES'): string
 /**
  * Get currency symbol by code
  */
-export const getCurrencySymbol = (currency: string = 'KES'): string => {
-  const currencyData = SUPPORTED_CURRENCIES[currency as CurrencyCode] || SUPPORTED_CURRENCIES.KES;
+export const getCurrencySymbol = (currency?: string | null): string => {
+  const currencyData = SUPPORTED_CURRENCIES[(currency || 'KES') as CurrencyCode] || SUPPORTED_CURRENCIES.KES;
   return currencyData.symbol;
 };
 
 /**
  * Get currency name by code
  */
-export const getCurrencyName = (currency: string = 'KES'): string => {
-  const currencyData = SUPPORTED_CURRENCIES[currency as CurrencyCode] || SUPPORTED_CURRENCIES.KES;
+export const getCurrencyName = (currency?: string | null): string => {
+  const currencyData = SUPPORTED_CURRENCIES[(currency || 'KES') as CurrencyCode] || SUPPORTED_CURRENCIES.KES;
   return currencyData.name;
 };
 

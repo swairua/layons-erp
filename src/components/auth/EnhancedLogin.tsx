@@ -11,7 +11,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export function EnhancedLogin() {
-  const { signIn, loading, isAuthenticated } = useAuth();
+  const { signIn, loading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,39 +49,18 @@ export function EnhancedLogin() {
 
     setSubmitting(true);
     try {
-      const { error } = await signIn(formData.email, formData.password);
+      const { error, session } = await signIn(formData.email, formData.password);
 
       if (error) {
-        // Ensure error is properly formatted before passing to handler
         handleAuthError(error);
         setSubmitting(false);
+      } else if (session?.user) {
+        console.info('[EnhancedLogin] Session confirmed; navigating to destination route');
+        navigate(location.pathname || '/', { replace: true });
+        setSubmitting(false);
       } else {
-        // Wait for auth state to stabilize before navigating
-        console.log('🔄 [EnhancedLogin] Waiting for auth state stabilization...');
-
-        let authStable = false;
-        let waitAttempts = 0;
-        const maxWaitAttempts = 50; // 5 seconds max (50 * 100ms)
-
-        while (!authStable && waitAttempts < maxWaitAttempts) {
-          // Check if we're authenticated in the context
-          if (isAuthenticated) {
-            authStable = true;
-            console.log('✅ [EnhancedLogin] Auth state stable, navigating...');
-            break;
-          }
-
-          // Wait a bit before checking again
-          await new Promise(resolve => setTimeout(resolve, 100));
-          waitAttempts++;
-        }
-
-        if (!authStable) {
-          console.warn('⚠️ [EnhancedLogin] Auth state did not stabilize within timeout, navigating anyway');
-        }
-
-        // Redirect back to the page the user was trying to access, or to dashboard
-        navigate(location.pathname || '/');
+        console.error('[EnhancedLogin] Sign-in completed without a session');
+        toast.error('Sign-in could not be completed. Please try again.');
         setSubmitting(false);
       }
     } catch (unexpectedError) {

@@ -2,15 +2,17 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, FileText } from 'lucide-react';
-import { useQuotations, useCompanies } from '@/hooks/useDatabase';
+import { useQuotations } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 export default function QuotationsMinimal() {
   const { profile } = useAuth();
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
-  const { data: quotations, isLoading, error } = useQuotations(currentCompany?.id);
+  const { currentCompany } = useCurrentCompany();
+  const { data: quotationResponse, isLoading, error } = useQuotations(currentCompany?.id);
+  const quotations = toCollection(quotationResponse);
 
   if (error) {
     return (

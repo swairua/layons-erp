@@ -32,6 +32,7 @@ import {
 import { useUpdateLPOWithItems, useAllSuppliersAndCustomers, useProducts, useCompanies } from '@/hooks/useDatabase';
 import { toast } from '@/utils/safeToast';
 import { validateLPOEdit } from '@/utils/lpoValidation';
+import { toCollection } from '@/utils/collection';
 
 function formatErrorMessage(error: any): string {
   if (!error) return 'Unknown error occurred';
@@ -88,7 +89,8 @@ export const EditLPOModal = ({
   const currentCompany = companies?.[0];
   const { data: supplierData } = useAllSuppliersAndCustomers(currentCompany?.id);
   const suppliers = supplierData?.all || [];
-  const { data: products } = useProducts(currentCompany?.id);
+  const { data: productsResponse } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const updateLPOWithItems = useUpdateLPOWithItems();
 
   useEffect(() => {

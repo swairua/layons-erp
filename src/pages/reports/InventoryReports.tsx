@@ -42,6 +42,7 @@ import {
 } from 'recharts';
 import { useProducts, useStockMovements } from '@/hooks/useDatabase';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 // No sample data - using real database data only
 
@@ -51,7 +52,8 @@ export default function InventoryReports() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
-  const { data: products } = useProducts();
+  const { data: productsResponse } = useProducts();
+  const products = toCollection(productsResponse);
   const { data: stockMovements } = useStockMovements();
 
   // Calculate stock movement data from real movements

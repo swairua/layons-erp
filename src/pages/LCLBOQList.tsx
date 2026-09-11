@@ -19,12 +19,14 @@ import { Download, Edit2, Trash2, Search } from 'lucide-react';
 import { downloadLCLBOQPDF, reconstructHierarchicalDataFromSnapshot } from '@/utils/lclBoqPdfGenerator';
 import { EditLCLBOQModal } from '@/components/lcl/EditLCLBOQModal';
 import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { toCollection } from '@/utils/collection';
 
 export default function LCLBOQList() {
   const { currentCompany } = useCurrentCompany();
   const companyId = currentCompany?.id || '';
   const { toast } = useToast();
-  const { data: customers } = useCustomers(companyId);
+  const { data: customersResponse } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
 
   const [boqs, setBoqs] = useState<LCLBOQRecord[]>([]);
   const [loading, setLoading] = useState(true);

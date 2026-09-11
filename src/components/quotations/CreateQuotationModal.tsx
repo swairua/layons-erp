@@ -32,7 +32,8 @@ import {
   ChevronUp,
   Loader2
 } from 'lucide-react';
-import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings, useCompanies } from '@/hooks/useDatabase';
+import { useCustomers, useProducts, useGenerateDocumentNumber, useTaxSettings } from '@/hooks/useDatabase';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -40,6 +41,7 @@ import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { toCollection } from '@/utils/collection';
 
 interface QuotationItem {
   id: string;
@@ -89,12 +91,19 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
 
   // Get current user and company from context
   const { profile, loading: authLoading } = useAuth();
-  const { data: companies } = useCompanies();
-  const currentCompany = companies?.[0];
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { currentCompany } = useCurrentCompany();
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (open && currentCompany?.currency && currency === 'KES') {
+      setCurrency(currentCompany.currency);
+    }
+  }, [open, currentCompany?.currency]);
 
   useEffect(() => {
     if (!rateLoading && fetchedRate > 0) {

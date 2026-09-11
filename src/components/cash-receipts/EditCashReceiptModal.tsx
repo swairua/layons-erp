@@ -27,6 +27,7 @@ import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { extractBoqNumberFromNotes, fetchBoqProjectTitle } from '@/utils/boqInvoiceLinkage';
+import { toCollection } from '@/utils/collection';
 
 const PAYMENT_METHODS = [
   'Cash',
@@ -70,8 +71,10 @@ export function EditCashReceiptModal({ open, onOpenChange, onSuccess, receipt }:
   const [boqProjectTitle, setBoqProjectTitle] = useState<string | null>(null);
 
   const { currentCompany, isLoading: companyLoading } = useCurrentCompany();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
 
   // Get default tax rate
@@ -137,7 +140,7 @@ export function EditCashReceiptModal({ open, onOpenChange, onSuccess, receipt }:
     }));
   }, [applyTax, defaultTaxRate]);
 
-  const filteredProducts = products?.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
     product.product_code.toLowerCase().includes(searchProduct.toLowerCase())
   ) || [];

@@ -34,6 +34,7 @@ import { useCustomers, useProducts, useTaxSettings } from '@/hooks/useDatabase';
 import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 interface ProformaItem {
   id: string;
@@ -97,8 +98,10 @@ export const EditProformaModal = ({
   const [previewItem, setPreviewItem] = useState<string | null>(null);
 
   const { currentCompany } = useCurrentCompany();
-  const { data: customers } = useCustomers(companyId);
-  const { data: products } = useProducts(companyId);
+  const { data: customersResponse } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse } = useProducts(companyId);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(companyId);
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;

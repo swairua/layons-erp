@@ -59,7 +59,7 @@ export interface AuthContextType {
   profile: UserProfile | null;
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null; session: Session | null }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
@@ -493,6 +493,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    console.info('[AuthContext] Sign-in started: requesting credentials');
     const hardTimeoutId = setTimeout(() => {
       if (mountedRef.current) {
         setLoading(false);
@@ -514,7 +515,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Ensure error is a proper Error object with a message property
       const errorMessage = parseErrorMessage(error);
       const formattedError = new Error(errorMessage || 'Authentication failed');
-      return { error: formattedError as AuthError };
+      return { error: formattedError as AuthError, session: null };
     }
 
     if (data?.error) {
@@ -524,13 +525,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Ensure error is a proper Error object with a message property
       const errorMessage = parseErrorMessage(data.error);
       const formattedError = new Error(errorMessage || 'Authentication failed');
-      return { error: formattedError as AuthError };
+      return { error: formattedError as AuthError, session: null };
     }
 
     // Update auth state and wait for profile load before clearing loading
     try {
-      const session = (data as any)?.data?.session;
+      const session = (data as any)?.session ?? (data as any)?.data?.session;
       const signedInUser = session?.user;
+      console.info('[AuthContext] Credentials accepted: session established', {
+        hasSession: !!session,
+        hasUser: !!signedInUser,
+      });
       if (signedInUser) {
         // Check if token is stored in localStorage
         try {
@@ -558,12 +563,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (mountedRef.current) {
             if (userProfile) {
+              console.info('[AuthContext] Profile and permissions loaded');
               if (userProfile.email) {
                 userProfile.email = userProfile.email.toLowerCase();
               }
               setProfile(userProfile);
               setProfileReady(true);
             } else {
+              console.warn('[AuthContext] Profile unavailable; using fallback profile');
               // Create minimal profile as fallback to allow app to function
               const fallbackProfile: UserProfile = {
                 id: signedInUser.id,
@@ -623,12 +630,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         clearTimeout(hardTimeoutId);
         setTimeout(() => toast.success('Signed in successfully'), 0);
-        return { error: null };
+        return { error: null, session };
       } else {
         clearTimeout(hardTimeoutId);
         setLoading(false);
         const errorMessage = 'Authentication failed: no user data returned';
-        return { error: new Error(errorMessage) as AuthError };
+        return { error: new Error(errorMessage) as AuthError, session: null };
       }
     } catch (error) {
       console.error('❌ Unexpected error in signIn:', {
@@ -638,7 +645,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       clearTimeout(hardTimeoutId);
       setLoading(false);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during sign in';
-      return { error: new Error(errorMessage) as AuthError };
+      return { error: new Error(errorMessage) as AuthError, session: null };
     }
   }, [fetchProfile]);
 

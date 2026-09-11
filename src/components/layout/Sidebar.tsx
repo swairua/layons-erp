@@ -105,6 +105,7 @@ const sidebarItems: SidebarItem[] = [
       { title: 'Sales Reports', icon: BarChart3, href: '/reports/sales', featureKey: 'reports-sales' },
       { title: 'Inventory Reports', icon: Package, href: '/reports/inventory', featureKey: 'reports-inventory' },
       { title: 'Statement of Accounts', icon: FileText, href: '/reports/statements', featureKey: 'reports-statements' },
+      { title: 'Customer Statements', icon: FileText, href: '/reports/customer-statements', featureKey: 'reports-statements' },
     ],
   },
   {

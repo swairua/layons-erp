@@ -33,6 +33,7 @@ import {
 import { toast } from 'sonner';
 import { useCreateCustomer, useCustomers, useCompanies } from '@/hooks/useDatabase';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
+import { toCollection } from '@/utils/collection';
 
 interface CreateCustomerModalProps {
   open: boolean;
@@ -66,7 +67,8 @@ export function CreateCustomerModal({ open, onOpenChange, onSuccess }: CreateCus
 
   const { data: companies } = useCompanies();
   const currentCompany = companies?.[0];
-  const { data: customers } = useCustomers(currentCompany?.id);
+  const { data: customersResponse } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
   const createCustomer = useCreateCustomer();
 
   const generateCustomerCode = () => {

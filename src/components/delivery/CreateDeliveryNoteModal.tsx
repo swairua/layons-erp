@@ -33,6 +33,7 @@ import { useCreateDeliveryNote } from '@/hooks/useQuotationItems';
 import { mapDeliveryNoteForDatabase } from '@/utils/deliveryNoteMapper';
 import { validateDeliveryNoteData } from '@/utils/deliveryNoteValidation';
 import { toast } from 'sonner';
+import { toCollection } from '@/utils/collection';
 
 interface DeliveryItem {
   id: string;
@@ -79,9 +80,12 @@ export const CreateDeliveryNoteModal = ({
   const currentCompany = companies?.[0];
   const companyId = currentCompany?.id;
 
-  const { data: customers } = useCustomers(companyId);
-  const { data: products } = useProducts(companyId);
-  const { data: invoices } = useInvoices(companyId);
+  const { data: customersResponse } = useCustomers(companyId);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse } = useProducts(companyId);
+  const products = toCollection(productsResponse);
+  const { data: invoiceResponse } = useInvoices(companyId);
+  const invoices = toCollection(invoiceResponse);
   const createDeliveryNote = useCreateDeliveryNote();
 
   useEffect(() => {

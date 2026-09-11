@@ -33,6 +33,7 @@ import { toast } from 'sonner';
 import { parseErrorMessageWithCodes } from '@/utils/errorHelpers';
 import { useCreatePayment } from '@/hooks/useDatabase';
 import { toNumber } from '@/utils/numericFormHelpers';
+import { toCollection } from '@/utils/collection';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -88,7 +89,8 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   // Fetch all available invoices for selection
   const { currentCompany } = useCurrentCompany();
   const { profile } = useAuth();
-  const { data: invoices = [] } = useInvoices(currentCompany?.id);
+  const { data: invoiceResponse } = useInvoices(currentCompany?.id);
+  const invoices = toCollection(invoiceResponse);
   const createPaymentMutation = useCreatePayment();
   
   // Include all invoices for manual payment adjustments (including fully paid ones)

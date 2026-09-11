@@ -40,6 +40,7 @@ import { validateLPO } from '@/utils/lpoValidation';
 import { validateSupplierSelection, ValidationResult } from '@/utils/customerSupplierValidation';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { toCollection } from '@/utils/collection';
 
 function formatErrorMessage(error: any): string {
   if (!error) return 'Unknown error occurred';
@@ -85,7 +86,7 @@ export const CreateLPOModal = ({
   });
 
   const [items, setItems] = useState<LPOItem[]>([]);
-  const [currency, setCurrency] = useState(currentCompany?.currency || 'KES');
+  const [currency, setCurrency] = useState('KES');
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
 
@@ -116,7 +117,8 @@ export const CreateLPOModal = ({
   const currentCompany = companies?.[0];
   const { data: supplierData } = useAllSuppliersAndCustomers(currentCompany?.id);
   const suppliers = supplierData?.all || [];
-  const { data: products } = useProducts(currentCompany?.id);
+  const { data: productsResponse } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const createLPO = useCreateLPO();
   const generateLPONumber = useGenerateLPONumber();
   const createCustomer = useCreateCustomer();

@@ -27,6 +27,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { toCollection } from '@/utils/collection';
 
 const PAYMENT_METHODS = [
   'Cash',
@@ -68,8 +69,10 @@ export function CreateCashReceiptModal({ open, onOpenChange, onSuccess }: Create
 
   const { profile, loading: authLoading } = useAuth();
   const { currentCompany, isLoading: companyLoading } = useCurrentCompany();
-  const { data: customers, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
-  const { data: products, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const { data: customersResponse, isLoading: loadingCustomers } = useCustomers(currentCompany?.id);
+  const customers = toCollection(customersResponse);
+  const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
+  const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
 
   // Get default tax rate
@@ -86,7 +89,7 @@ export function CreateCashReceiptModal({ open, onOpenChange, onSuccess }: Create
     }));
   }, [applyTax, defaultTaxRate]);
 
-  const filteredProducts = products?.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchProduct.toLowerCase()) ||
     product.product_code.toLowerCase().includes(searchProduct.toLowerCase())
   ) || [];

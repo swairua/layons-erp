@@ -7,6 +7,9 @@ import { Download, Send, X, AlertCircle, CheckCircle, Clock } from 'lucide-react
 import { usePayments, useCompanies } from '@/hooks/useDatabase';
 import { useInvoicesFixed as useInvoices } from '@/hooks/useInvoicesFixed';
 import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
+import { toCollection } from '@/utils/collection';
+import { formatCurrency } from '@/utils/currencyFormatter';
+import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 
 interface CustomerStatementPreviewModalProps {
@@ -33,13 +36,17 @@ export default function CustomerStatementPreviewModal({
   customer,
   statementDate = new Date().toISOString().split('T')[0]
 }: CustomerStatementPreviewModalProps) {
-  const { data: companies } = useCompanies();
-  const { data: invoices } = useInvoices();
-  const { data: payments } = usePayments();
+  const { currentCompany } = useCurrentCompany();
+  const companyId = currentCompany?.id;
+  const { data: invoiceResponse } = useInvoices(companyId, { fetchAll: true });
+  const { data: paymentResponse } = usePayments(companyId, { fetchAll: true });
+  const invoices = toCollection(invoiceResponse);
+  const payments = toCollection(paymentResponse);
+  const formatAmount = (amount?: number | null) => formatCurrency(amount ?? 0, currentCompany?.currency);
 
   // Get customer's invoices and payments
-  const customerInvoices = invoices?.filter(inv => inv.customer_id === customer.customer_id) || [];
-  const customerPayments = payments?.filter(pay => pay.customer_id === customer.customer_id) || [];
+  const customerInvoices = invoices.filter(inv => inv.customer_id === customer.customer_id);
+  const customerPayments = payments.filter(pay => pay.customer_id === customer.customer_id);
   
   // Get outstanding invoices
   const outstandingInvoices = customerInvoices.filter(inv => 
@@ -94,16 +101,17 @@ export default function CustomerStatementPreviewModal({
       };
       
       // Get current company details for PDF
-      const companyDetails = companies?.[0] ? {
-        name: companies[0].name,
-        address: companies[0].address,
-        city: companies[0].city,
-        country: companies[0].country,
-        phone: companies[0].phone,
-        email: companies[0].email,
-        tax_number: companies[0].tax_number,
-        logo_url: companies[0].logo_url,
-        company_services: companies[0].company_services
+      const companyDetails = currentCompany ? {
+        name: currentCompany.name,
+        address: currentCompany.address,
+        city: currentCompany.city,
+        country: currentCompany.country,
+        phone: currentCompany.phone,
+        email: currentCompany.email,
+        tax_number: currentCompany.tax_number,
+        logo_url: currentCompany.logo_url,
+        company_services: currentCompany.company_services,
+        currency: currentCompany.currency
       } : undefined;
 
       await generateCustomerStatementPDF(customerData, customerInvoices, customerPayments, {
@@ -157,7 +165,7 @@ export default function CustomerStatementPreviewModal({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Total Outstanding</p>
-                  <p className="font-bold text-base text-destructive">${customer.total_outstanding.toFixed(2)}</p>
+                  <p className="font-bold text-base text-destructive">{formatAmount(customer.total_outstanding)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Days Overdue</p>
@@ -176,23 +184,23 @@ export default function CustomerStatementPreviewModal({
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">Current</p>
-                  <p className="text-sm font-bold text-success">${aging.current.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-success">{formatAmount(aging.current)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">1-30 Days</p>
-                  <p className="text-sm font-bold text-warning">${aging.days30.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-warning">{formatAmount(aging.days30)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">31-60 Days</p>
-                  <p className="text-sm font-bold text-orange-600">${aging.days60.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-orange-600">{formatAmount(aging.days60)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">61-90 Days</p>
-                  <p className="text-sm font-bold text-red-600">${aging.days90.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-red-600">{formatAmount(aging.days90)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-sm text-muted-foreground">Over 90 Days</p>
-                  <p className="text-sm font-bold text-destructive">${aging.over90.toFixed(2)}</p>
+                  <p className="text-sm font-bold text-destructive">{formatAmount(aging.over90)}</p>
                 </div>
               </div>
             </CardContent>
@@ -233,9 +241,9 @@ export default function CustomerStatementPreviewModal({
                           <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                           <TableCell>{new Date(invoice.invoice_date).toLocaleDateString()}</TableCell>
                           <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
-                          <TableCell>${invoice.total_amount.toFixed(2)}</TableCell>
-                          <TableCell>${(invoice.paid_amount || 0).toFixed(2)}</TableCell>
-                          <TableCell className="font-medium">${outstanding.toFixed(2)}</TableCell>
+                          <TableCell>{formatAmount(invoice.total_amount)}</TableCell>
+                          <TableCell>{formatAmount(invoice.paid_amount)}</TableCell>
+                          <TableCell className="font-medium">{formatAmount(outstanding)}</TableCell>
                           <TableCell>{getStatusBadge(daysOverdue, outstanding)}</TableCell>
                         </TableRow>
                       );
@@ -269,7 +277,7 @@ export default function CustomerStatementPreviewModal({
                       .map((payment) => (
                         <TableRow key={payment.id}>
                           <TableCell>{new Date(payment.payment_date).toLocaleDateString()}</TableCell>
-                          <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                          <TableCell>{formatAmount(payment.amount)}</TableCell>
                           <TableCell className="capitalize">{payment.payment_method?.replace('_', ' ')}</TableCell>
                           <TableCell>{payment.reference_number || '-'}</TableCell>
                         </TableRow>
