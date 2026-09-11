@@ -538,6 +538,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
     }
   };
 
+  if (!quotation) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-7xl max-h-[90vh] overflow-y-auto">
@@ -613,7 +615,7 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
                       ))}
                     </SelectContent>
                   </Select>
-                  {quotation.currency && quotation.currency !== (currentCompany?.currency || 'KES') && quotation.exchange_rate && quotation.exchange_rate > 0 && (
+                  {quotation?.currency && quotation.currency !== (currentCompany?.currency || 'KES') && quotation.exchange_rate && quotation.exchange_rate > 0 && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                       <span>
                         1 {quotation.currency} = {quotation.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
