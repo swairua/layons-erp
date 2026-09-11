@@ -1,5 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
+const CORE_TABLES = ['profiles', 'companies', 'customers', 'products', 'quotations', 'invoices'];
+
 // Essential database tables creation script
 const DATABASE_SETUP_SQL = `
 -- Enable UUID extension
@@ -136,6 +138,9 @@ CREATE TABLE IF NOT EXISTS quotations (
     notes TEXT,
     terms_and_conditions TEXT,
     created_by UUID REFERENCES auth.users(id),
+    currency VARCHAR(3) DEFAULT 'KES',
+    exchange_rate DECIMAL(15,6) DEFAULT 1,
+    discount_amount DECIMAL(15,2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -151,6 +156,9 @@ CREATE TABLE IF NOT EXISTS quotation_items (
     tax_percentage DECIMAL(5,2) DEFAULT 0,
     tax_amount DECIMAL(15,2) DEFAULT 0,
     line_total DECIMAL(15,2) NOT NULL DEFAULT 0,
+    section_name TEXT,
+    section_labor_cost DECIMAL(15,2) DEFAULT 0,
+    unit_of_measure TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -250,7 +258,7 @@ export async function setupDatabase() {
       // Check if tables already exist instead of creating them
       const tablesExist = await checkExistingTables();
 
-      if (tablesExist >= 2) {
+      if (tablesExist === CORE_TABLES.length) {
         results.steps.push({ step: 'Tables already exist', success: true });
         results.tablesCreated.push('companies', 'profiles', 'user_permissions', 'customers', 'products', 'quotations', 'invoices');
       } else {
@@ -290,7 +298,7 @@ export async function setupDatabase() {
 
     // Step 3: Verify tables exist
     console.log('🔍 Verifying table creation...');
-    const tablesToCheck = ['profiles', 'companies', 'customers', 'products', 'quotations', 'invoices'];
+    const tablesToCheck = CORE_TABLES;
     let tablesExist = 0;
     
     for (const table of tablesToCheck) {
@@ -306,11 +314,10 @@ export async function setupDatabase() {
     
     results.steps.push({ 
       step: `Verify tables (${tablesExist}/${tablesToCheck.length} working)`, 
-      success: tablesExist >= 2 // At least profiles and companies should work
+      success: tablesExist === tablesToCheck.length
     });
 
-    // Overall success if we have the core tables
-    results.success = tablesExist >= 2;
+    results.success = tablesExist === tablesToCheck.length;
     
     if (results.success) {
       console.log(`✅ Database setup completed! ${tablesExist}/${tablesToCheck.length} tables verified.`);
@@ -330,7 +337,7 @@ export async function setupDatabase() {
 
 // Helper function to check existing tables
 async function checkExistingTables() {
-  const tables = ['profiles', 'companies', 'customers', 'products'];
+  const tables = CORE_TABLES;
   let existingCount = 0;
 
   for (const table of tables) {
@@ -384,6 +391,6 @@ export async function getDatabaseStatus() {
     }
   }
 
-  status.ready = status.tablesWorking >= 2; // At least profiles and companies
+  status.ready = status.tablesWorking === status.tablesChecked;
   return status;
 }

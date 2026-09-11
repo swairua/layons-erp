@@ -2109,12 +2109,12 @@ export const useDeleteQuotation = () => {
 export const useDeleteInvoice = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, companyId }: { id: string; companyId: string }) => {
       // Import the handler that will deal with BOQ reversal and inventory
       const { handleInvoiceDelete } = await import('@/utils/handleInvoiceDelete');
 
       try {
-        const result = await handleInvoiceDelete(id);
+        const result = await handleInvoiceDelete(id, companyId);
         return result;
       } catch (err) {
         // Check if this is an RLS policy issue
@@ -2125,6 +2125,8 @@ export const useDeleteInvoice = () => {
         if (msgLower.includes('company_id') ||
             msgLower.includes('has no field') ||
             msgLower.includes('policy') ||
+            msgLower.includes('permission denied') ||
+            msgLower.includes('insufficient privilege') ||
             msgLower.includes('does not exist')) {
           console.error('🔧 RLS Policy Issue Detected');
           console.error('Error details:', error);
@@ -2139,11 +2141,12 @@ export const useDeleteInvoice = () => {
         throw new Error(errorMessage);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['invoices_fixed'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['boqs'] });
       queryClient.invalidateQueries({ queryKey: ['stock_movements'] });
+      queryClient.invalidateQueries({ queryKey: ['invoice_summary', companyId] });
     },
   });
 };

@@ -229,52 +229,52 @@ export default function InventoryReports() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <Package className="h-8 w-8 text-primary" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Items In Stock</p>
-                <p className="text-2xl font-bold text-primary">{stats.totalItems}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-primary">{stats.totalItems}</p>
                 <p className="text-xs text-muted-foreground">Total quantity</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <TrendingUp className="h-8 w-8 text-success" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Stock Value</p>
-                <p className="text-2xl font-bold text-success">${stats.stockValue.toFixed(2)}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-success">${stats.stockValue.toFixed(2)}</p>
                 <p className="text-xs text-success">At cost price</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <TrendingDown className="h-8 w-8 text-warning" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Low Stock Items</p>
-                <p className="text-2xl font-bold text-warning">{stats.lowStock}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-warning">{stats.lowStock}</p>
                 <p className="text-xs text-warning">Need attention</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <AlertTriangle className="h-8 w-8 text-destructive" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Out of Stock</p>
-                <p className="text-2xl font-bold text-destructive">{stats.outOfStock}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-destructive">{stats.outOfStock}</p>
                 <p className="text-xs text-destructive">Urgent reorder</p>
               </div>
             </div>
@@ -283,7 +283,7 @@ export default function InventoryReports() {
       </div>
 
       {/* Report Type Selector */}
-      <Card>
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader>
           <CardTitle>Report Type</CardTitle>
         </CardHeader>
@@ -306,7 +306,7 @@ export default function InventoryReports() {
       {/* Charts based on report type */}
       {reportType === 'overview' && (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Stock Movement Trend</CardTitle>
             </CardHeader>
@@ -325,7 +325,7 @@ export default function InventoryReports() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Inventory by Category</CardTitle>
             </CardHeader>
@@ -355,7 +355,7 @@ export default function InventoryReports() {
       )}
 
       {reportType === 'movement' && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>Stock Movement Analysis</CardTitle>
           </CardHeader>
@@ -377,7 +377,7 @@ export default function InventoryReports() {
       )}
 
       {reportType === 'turnover' && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>Inventory Turnover Analysis</CardTitle>
           </CardHeader>
@@ -420,7 +420,7 @@ export default function InventoryReports() {
 
       {reportType === 'valuation' && (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Stock Value Distribution</CardTitle>
             </CardHeader>
@@ -437,7 +437,7 @@ export default function InventoryReports() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Valuation Summary</CardTitle>
             </CardHeader>
@@ -468,7 +468,7 @@ export default function InventoryReports() {
       {reportType === 'alerts' && (
         <div className="space-y-4">
           {/* Search and Filter */}
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Stock Alerts</CardTitle>
             </CardHeader>
@@ -528,7 +528,7 @@ export default function InventoryReports() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -558,7 +558,7 @@ export default function InventoryReports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-4 w-4" />
@@ -583,7 +583,7 @@ export default function InventoryReports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />

@@ -310,14 +310,14 @@ export default function OptimizedInventory() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-card">
+      <div className="grid min-w-0 gap-4 md:grid-cols-4">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Package className="h-5 w-5 text-primary" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Items</p>
-                <p className="text-2xl font-bold text-primary">
+            <div className="flex min-w-0 items-center gap-2">
+              <Package className="h-5 w-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Total Items</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-primary sm:text-2xl">
                   {loadingStats ? '...' : stats?.totalItems || 0}
                 </p>
               </div>
@@ -325,13 +325,13 @@ export default function OptimizedInventory() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <TrendingUp className="h-5 w-5 text-success" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Value</p>
-                <p className="text-2xl font-bold text-success">
+            <div className="flex min-w-0 items-center gap-2">
+              <TrendingUp className="h-5 w-5 shrink-0 text-success" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Total Value</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-success sm:text-2xl">
                   {loadingStats ? '...' : formatter.format(stats?.totalValue || 0)}
                 </p>
               </div>
@@ -339,13 +339,13 @@ export default function OptimizedInventory() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Low Stock</p>
-                <p className="text-2xl font-bold text-warning">
+            <div className="flex min-w-0 items-center gap-2">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Low Stock</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-warning sm:text-2xl">
                   {loadingStats ? '...' : stats?.lowStockItems || 0}
                 </p>
               </div>
@@ -353,13 +353,13 @@ export default function OptimizedInventory() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <TrendingDown className="h-5 w-5 text-destructive" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Out of Stock</p>
-                <p className="text-2xl font-bold text-destructive">
+            <div className="flex min-w-0 items-center gap-2">
+              <TrendingDown className="h-5 w-5 shrink-0 text-destructive" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Out of Stock</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-destructive sm:text-2xl">
                   {loadingStats ? '...' : stats?.outOfStockItems || 0}
                 </p>
               </div>
@@ -369,7 +369,7 @@ export default function OptimizedInventory() {
       </div>
 
       {/* Filters and Search */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4 flex-wrap gap-4">
             <div className="relative flex-1 min-w-64">
@@ -407,7 +407,7 @@ export default function OptimizedInventory() {
       </Card>
 
       {/* Inventory Table */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Inventory Items</span>

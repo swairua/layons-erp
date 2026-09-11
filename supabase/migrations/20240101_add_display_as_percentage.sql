@@ -1,11 +1,18 @@
--- Add display_as_percentage field to quotations table
-ALTER TABLE IF EXISTS quotations 
-ADD COLUMN IF NOT EXISTS display_as_percentage BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS public.quotations
+  ADD COLUMN IF NOT EXISTS display_as_percentage BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Add display_as_percentage field to invoices table
-ALTER TABLE IF EXISTS invoices 
-ADD COLUMN IF NOT EXISTS display_as_percentage BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS public.invoices
+  ADD COLUMN IF NOT EXISTS display_as_percentage BOOLEAN NOT NULL DEFAULT FALSE;
 
--- Add display_as_percentage field to proforma_invoices table
-ALTER TABLE IF EXISTS proforma_invoices 
-ADD COLUMN IF NOT EXISTS display_as_percentage BOOLEAN DEFAULT FALSE;
+ALTER TABLE IF EXISTS public.proforma_invoices
+  ADD COLUMN IF NOT EXISTS display_as_percentage BOOLEAN NOT NULL DEFAULT FALSE;
+
+UPDATE public.quotations SET display_as_percentage = FALSE WHERE display_as_percentage IS NULL;
+UPDATE public.invoices SET display_as_percentage = FALSE WHERE display_as_percentage IS NULL;
+UPDATE public.proforma_invoices SET display_as_percentage = FALSE WHERE display_as_percentage IS NULL;
+
+ALTER TABLE IF EXISTS public.quotations ALTER COLUMN display_as_percentage SET NOT NULL;
+ALTER TABLE IF EXISTS public.invoices ALTER COLUMN display_as_percentage SET NOT NULL;
+ALTER TABLE IF EXISTS public.proforma_invoices ALTER COLUMN display_as_percentage SET NOT NULL;
+
+NOTIFY pgrst, 'reload schema';

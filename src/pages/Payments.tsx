@@ -412,37 +412,37 @@ export default function Payments() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <DollarSign className="h-5 w-5 text-success" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Received Today</p>
-                <p className="text-2xl font-bold text-success">{formatCurrency(totalReceivedToday)}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <DollarSign className="h-5 w-5 shrink-0 text-success" />
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Total Received Today</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-success sm:text-2xl">{formatCurrency(totalReceivedToday)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-success-light text-success">{completedThisMonth}</Badge>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Completed This Month</p>
-                <p className="text-2xl font-bold text-success">{formatCurrency(totalThisMonth)}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <Badge className="shrink-0 bg-success-light text-success">{completedThisMonth}</Badge>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Completed This Month</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-success sm:text-2xl">{formatCurrency(totalThisMonth)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Badge className="bg-warning-light text-warning">0</Badge>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold text-warning">{formatCurrency(pendingAmount)}</p>
+            <div className="flex min-w-0 items-center gap-2">
+              <Badge className="shrink-0 bg-warning-light text-warning">0</Badge>
+              <div className="min-w-0 flex-1">
+                <p className="break-words text-sm font-medium text-muted-foreground">Pending</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-warning sm:text-2xl">{formatCurrency(pendingAmount)}</p>
               </div>
             </div>
           </CardContent>
@@ -487,7 +487,7 @@ export default function Payments() {
       </div>
 
       {/* Filters and Search */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
@@ -508,7 +508,7 @@ export default function Payments() {
       </Card>
 
       {/* Payments Table */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardHeader>
           <CardTitle>Payment History</CardTitle>
         </CardHeader>

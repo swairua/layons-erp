@@ -457,7 +457,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
         terms_and_conditions: termsAndConditions,
         subtotal: totalMaterials,
         tax_amount: totalTax,
-        total_amount: grandTotal
+        total_amount: grandTotal,
+        display_as_percentage: quotation.display_as_percentage ?? false
       };
 
       const { data: updatedData, error: updateError } = await supabase

@@ -221,58 +221,58 @@ export default function Inventory() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-card">
-          <CardContent className="pt-6">
+      <div className="grid min-w-0 gap-4 md:grid-cols-4">
+        <Card className="min-w-0 overflow-hidden shadow-card">
+          <CardContent className="min-w-0 pt-6">
             <div className="flex flex-col space-y-2">
-              <div className="flex items-center space-x-2">
-                <Package className="h-5 w-5 text-primary" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Total Items</p>
+              <div className="flex min-w-0 items-center space-x-2">
+                <Package className="h-5 w-5 shrink-0 text-primary" />
+                <p className="min-w-0 break-words text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Items</p>
               </div>
-              <p className="text-lg font-bold text-primary pl-7">{inventory.length}</p>
+              <p className="min-w-0 break-words pl-7 text-base font-bold tabular-nums text-primary sm:text-lg">{inventory.length}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
-          <CardContent className="pt-6">
+        <Card className="min-w-0 overflow-hidden shadow-card">
+          <CardContent className="min-w-0 pt-6">
             <div className="flex flex-col space-y-2">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-success" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Total Value</p>
+              <div className="flex min-w-0 items-center space-x-2">
+                <TrendingUp className="h-5 w-5 shrink-0 text-success" />
+                <p className="min-w-0 break-words text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total Value</p>
               </div>
-              <p className="text-lg font-bold text-success pl-7">{formatCurrency(totalValue)}</p>
+              <p className="min-w-0 break-words pl-7 text-base font-bold tabular-nums text-success sm:text-lg">{formatCurrency(totalValue)}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
-          <CardContent className="pt-6">
+        <Card className="min-w-0 overflow-hidden shadow-card">
+          <CardContent className="min-w-0 pt-6">
             <div className="flex flex-col space-y-2">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5 text-warning" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Low Stock</p>
+              <div className="flex min-w-0 items-center space-x-2">
+                <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
+                <p className="min-w-0 break-words text-xs font-semibold uppercase tracking-wide text-muted-foreground">Low Stock</p>
               </div>
-              <p className="text-lg font-bold text-warning pl-7">{lowStockItems}</p>
+              <p className="min-w-0 break-words pl-7 text-base font-bold tabular-nums text-warning sm:text-lg">{lowStockItems}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
-          <CardContent className="pt-6">
+        <Card className="min-w-0 overflow-hidden shadow-card">
+          <CardContent className="min-w-0 pt-6">
             <div className="flex flex-col space-y-2">
-              <div className="flex items-center space-x-2">
-                <TrendingDown className="h-5 w-5 text-destructive" />
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Out of Stock</p>
+              <div className="flex min-w-0 items-center space-x-2">
+                <TrendingDown className="h-5 w-5 shrink-0 text-destructive" />
+                <p className="min-w-0 break-words text-xs font-semibold uppercase tracking-wide text-muted-foreground">Out of Stock</p>
               </div>
-              <p className="text-lg font-bold text-destructive pl-7">{outOfStockItems}</p>
+              <p className="min-w-0 break-words pl-7 text-base font-bold tabular-nums text-destructive sm:text-lg">{outOfStockItems}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters and Search */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4">
             <div className="relative flex-1 max-w-md">
@@ -293,7 +293,7 @@ export default function Inventory() {
       </Card>
 
       {/* Inventory Table */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardHeader>
           <CardTitle>Inventory Items</CardTitle>
         </CardHeader>

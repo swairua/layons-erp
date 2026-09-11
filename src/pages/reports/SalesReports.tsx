@@ -367,7 +367,7 @@ export default function SalesReports() {
 
       {/* Custom Date Range */}
       {dateRange === 'custom' && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -395,52 +395,52 @@ export default function SalesReports() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <DollarSign className="h-8 w-8 text-success" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Daily Sales</p>
-                <p className="text-2xl font-bold text-success">{currency} {stats.dailySales.toFixed(2)}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-success">{currency} {stats.dailySales.toFixed(2)}</p>
                 <p className="text-xs text-success">Today's revenue</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <TrendingUp className="h-8 w-8 text-primary" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Monthly Sales</p>
-                <p className="text-2xl font-bold text-primary">{currency} {stats.monthlySales.toFixed(2)}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-primary">{currency} {stats.monthlySales.toFixed(2)}</p>
                 <p className="text-xs text-success">Last 30 days</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <BarChart3 className="h-8 w-8 text-success" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Yearly Sales</p>
-                <p className="text-2xl font-bold text-success">{currency} {stats.yearlySales.toFixed(2)}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-success">{currency} {stats.yearlySales.toFixed(2)}</p>
                 <p className="text-xs text-success">This year</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <ShoppingCart className="h-8 w-8 text-blue-500" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Total Invoices</p>
-                <p className="text-2xl font-bold text-blue-500">{stats.totalInvoices}</p>
+                <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl text-blue-500">{stats.totalInvoices}</p>
                 <p className="text-xs text-muted-foreground">All time</p>
               </div>
             </div>
@@ -449,7 +449,7 @@ export default function SalesReports() {
       </div>
 
       {/* Report Type Selector */}
-      <Card>
+      <Card className="min-w-0 overflow-hidden">
         <CardHeader>
           <CardTitle>Report Type</CardTitle>
         </CardHeader>
@@ -471,7 +471,7 @@ export default function SalesReports() {
       {/* Charts based on report type */}
       {reportType === 'overview' && (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Monthly Sales Trend</CardTitle>
             </CardHeader>
@@ -489,7 +489,7 @@ export default function SalesReports() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Invoice Volume</CardTitle>
             </CardHeader>
@@ -511,7 +511,7 @@ export default function SalesReports() {
 
       {reportType === 'products' && (
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Top Products by Sales</CardTitle>
             </CardHeader>
@@ -538,7 +538,7 @@ export default function SalesReports() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <CardTitle>Product Performance</CardTitle>
             </CardHeader>
@@ -558,7 +558,7 @@ export default function SalesReports() {
       )}
 
       {reportType === 'customers' && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>Top Customers by Sales</CardTitle>
           </CardHeader>
@@ -588,7 +588,7 @@ export default function SalesReports() {
       )}
 
       {reportType === 'trends' && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>Sales vs Customer Growth</CardTitle>
           </CardHeader>
@@ -611,7 +611,7 @@ export default function SalesReports() {
 
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -653,7 +653,7 @@ export default function SalesReports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-4 w-4" />
@@ -693,7 +693,7 @@ export default function SalesReports() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />

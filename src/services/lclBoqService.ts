@@ -472,6 +472,7 @@ export async function convertLCLBOQToInvoice(params: {
         created_by: createdBy,
         balance_due: totalAmount,
         paid_amount: 0,
+        display_as_percentage: false,
       },
     ])
     .select()
@@ -516,6 +517,8 @@ export async function convertLCLBOQToInvoice(params: {
 
   if (updateError) {
     console.error('Failed to mark BOQ as converted:', updateError);
+    await supabase.from('invoices').delete().eq('id', invoice.id);
+    throw new Error(`Failed to mark BOQ as converted: ${updateError.message}`);
   }
 
   return { id: invoice.id, invoice_number: invoice.invoice_number };

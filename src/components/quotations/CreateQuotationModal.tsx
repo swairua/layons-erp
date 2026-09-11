@@ -628,7 +628,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="space-y-4">
             <Card>
               <CardHeader>
@@ -843,7 +843,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                   const sectionTotal = calculateSectionTotalWithLabor(section);
 
                   return (
-                    <Card key={section.id} className="border-2">
+                    <Card key={section.id} className="min-w-0 overflow-hidden border-2">
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 flex-1">
@@ -884,7 +884,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                               No items in this section. Search and add products above.
                             </div>
                           ) : (
-                            <Table className="text-sm">
+                            <div className="w-full overflow-x-auto"><Table className="min-w-[50rem] text-sm">
                               <TableHeader>
                                 <TableRow>
                                   <TableHead>Product</TableHead>
@@ -983,15 +983,15 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                                   </TableRow>
                                 ))}
                               </TableBody>
-                            </Table>
+                            </Table></div>
                           )}
 
                           <div className="space-y-2 border-t pt-4">
-                            <div className="flex justify-between">
+                            <div className="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-1">
                               <span>Materials Subtotal:</span>
                               <span className="font-semibold">{formatCurrency(sectionMaterialsTotal)}</span>
                             </div>
-                            <div className="flex justify-between items-center">
+                            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                               <Label htmlFor={`labor-${section.id}`} className="font-medium">Labor Cost:</Label>
                               <Input
                                 id={`labor-${section.id}`}
@@ -1006,7 +1006,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
                                 min="0"
                               />
                             </div>
-                            <div className="flex justify-between border-t pt-2">
+                            <div className="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-1 border-t pt-2">
                               <span className="font-bold">Section Total:</span>
                               <span className="font-bold text-primary">{formatCurrency(sectionTotal)}</span>
                             </div>
@@ -1027,23 +1027,23 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
               <CardTitle>Quotation Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex justify-end">
-                <div className="w-80 space-y-2">
-                  <div className="flex justify-between">
+              <div className="flex min-w-0 justify-end">
+                <div className="w-full max-w-sm min-w-0 space-y-2">
+                  <div className="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-1">
                     <span>Total Materials:</span>
-                    <span className="font-semibold">{formatCurrency(calculateTotalMaterials())}</span>
+                    <span className="min-w-0 break-words text-right font-semibold tabular-nums">{formatCurrency(calculateTotalMaterials())}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-1">
                     <span>Total Labor:</span>
-                    <span className="font-semibold">{formatCurrency(calculateTotalLabor())}</span>
+                    <span className="min-w-0 break-words text-right font-semibold tabular-nums">{formatCurrency(calculateTotalLabor())}</span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-1">
                     <span>Tax:</span>
-                    <span className="font-semibold">{formatCurrency(getTotalTax())}</span>
+                    <span className="min-w-0 break-words text-right font-semibold tabular-nums">{formatCurrency(getTotalTax())}</span>
                   </div>
                   <div className="flex justify-between text-lg border-t pt-2">
                     <span className="font-bold">Grand Total:</span>
-                    <span className="font-bold text-primary">{formatCurrency(calculateGrandTotal())}</span>
+                    <span className="min-w-0 break-words text-right font-bold tabular-nums text-primary">{formatCurrency(calculateGrandTotal())}</span>
                   </div>
                 </div>
               </div>

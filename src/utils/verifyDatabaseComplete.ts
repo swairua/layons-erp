@@ -29,7 +29,7 @@ const EXPECTED_STRUCTURE: Record<string, string[]> = {
   invoices: [
     'id', 'company_id', 'customer_id', 'invoice_number', 'invoice_date',
     'due_date', 'lpo_number', 'status', 'subtotal', 'tax_amount', 'total_amount',
-    'paid_amount', 'balance_due', 'notes', 'terms_and_conditions', 'created_at', 'updated_at'
+    'paid_amount', 'balance_due', 'display_as_percentage', 'notes', 'terms_and_conditions', 'created_at', 'updated_at'
   ],
   invoice_items: [
     'id', 'invoice_id', 'product_id', 'product_name', 'description', 'quantity',
@@ -39,7 +39,7 @@ const EXPECTED_STRUCTURE: Record<string, string[]> = {
   quotations: [
     'id', 'company_id', 'customer_id', 'quotation_number', 'quotation_date',
     'valid_until', 'status', 'subtotal', 'tax_amount', 'total_amount',
-    'notes', 'terms_and_conditions', 'created_at', 'updated_at'
+    'notes', 'terms_and_conditions', 'display_as_percentage', 'created_at', 'updated_at'
   ],
   quotation_items: [
     'id', 'quotation_id', 'product_id', 'product_name', 'description', 'quantity',
@@ -74,7 +74,7 @@ const EXPECTED_STRUCTURE: Record<string, string[]> = {
   proforma_invoices: [
     'id', 'company_id', 'customer_id', 'proforma_number', 'proforma_date',
     'valid_until', 'status', 'subtotal', 'tax_amount', 'total_amount',
-    'notes', 'terms_and_conditions', 'created_at', 'updated_at'
+    'notes', 'terms_and_conditions', 'display_as_percentage', 'created_at', 'updated_at'
   ],
   proforma_items: [
     'id', 'proforma_invoice_id', 'product_id', 'product_name', 'description',

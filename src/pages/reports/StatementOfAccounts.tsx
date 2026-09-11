@@ -249,49 +249,49 @@ const StatementOfAccounts = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <DollarSign className="h-8 w-8 text-primary" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Total Outstanding</p>
-                <p className="text-lg font-bold text-primary">{formatCurrency(totalOutstanding)}</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-primary">{formatCurrency(totalOutstanding)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <AlertTriangle className="h-8 w-8 text-destructive" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Overdue Amount</p>
-                <p className="text-lg font-bold text-destructive">{formatCurrency(totalOverdue)}</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-destructive">{formatCurrency(totalOverdue)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <Users className="h-8 w-8 text-secondary" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Active Customers</p>
-                <p className="text-lg font-bold text-secondary">{filteredStatements.length}</p>
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-secondary">{filteredStatements.length}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
+            <div className="flex min-w-0 items-center space-x-2">
               <Clock className="h-8 w-8 text-warning" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-muted-foreground">Overdue Customers</p>
-                <p className="text-lg font-bold text-warning">
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-warning">
                   {computedStatements.filter(s => s.overdueAmount > 0).length}
                 </p>
               </div>
@@ -301,7 +301,7 @@ const StatementOfAccounts = () => {
       </div>
 
       {/* Filters */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-primary" />
@@ -346,7 +346,7 @@ const StatementOfAccounts = () => {
       </Card>
 
       {/* Customer Statements List */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardHeader>
           <CardTitle>Customer Account Statements</CardTitle>
           <CardDescription>
@@ -398,22 +398,22 @@ const StatementOfAccounts = () => {
                   <CardContent>
                     {/* Account Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 p-4 bg-muted/30 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Current Balance</p>
+                      <div className="min-w-0">
+                <p className="text-sm font-medium text-muted-foreground">Current Balance</p>
                         <p className="text-sm font-bold text-primary">{formatCurrency(statement.currentBalance)}</p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Credit Limit</p>
+                      <div className="min-w-0">
+                <p className="text-sm font-medium text-muted-foreground">Credit Limit</p>
                         <p className="text-sm font-bold">{formatCurrency(statement.creditLimit)}</p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Available Credit</p>
+                      <div className="min-w-0">
+                <p className="text-sm font-medium text-muted-foreground">Available Credit</p>
                         <p className="text-sm font-bold text-success">
                           {formatCurrency(statement.creditLimit - statement.currentBalance)}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Overdue Amount</p>
+                      <div className="min-w-0">
+                <p className="text-sm font-medium text-muted-foreground">Overdue Amount</p>
                         <p className={`text-sm font-bold ${statement.overdueAmount > 0 ? 'text-destructive' : 'text-success'}`}>
                           {formatCurrency(statement.overdueAmount)}
                         </p>
@@ -466,7 +466,7 @@ const StatementOfAccounts = () => {
                           {statement.transactions.map((transaction, index) => (
                             <TableRow key={index}>
                               <TableCell>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex min-w-0 items-center space-x-2">
                                   <Calendar className="h-4 w-4 text-muted-foreground" />
                                   <span>{new Date(transaction.date).toLocaleDateString()}</span>
                                 </div>
