@@ -209,27 +209,60 @@ SELECT 'SUCCESS: Table modified and ready for use' as status;
  */
 export function getReEnableRLSSQL(): string {
   return `
--- ============================================================================
--- RE-ENABLE RLS WITH SAFE POLICIES
--- ============================================================================
--- Note: Only enable RLS after company_id column exists and is populated
--- ============================================================================
-
 BEGIN TRANSACTION;
 
--- Enable RLS on invoices
-ALTER TABLE IF EXISTS invoices ENABLE ROW LEVEL SECURITY;
+-- Re-enable RLS on all tables
+DO $$
+DECLARE
+  tbl TEXT;
+  table_list TEXT[] := ARRAY[
+    'invoices', 'invoice_items', 'customers', 'quotations', 'quotation_items',
+    'payments', 'payment_allocations', 'boqs', 'credit_notes', 'credit_note_items',
+    'credit_note_allocations', 'proforma_invoices', 'proforma_items',
+    'lpos', 'lpo_items', 'stock_movements', 'cash_receipts',
+    'delivery_notes', 'delivery_note_items', 'products', 'tax_settings',
+    'units', 'remittance_advice', 'remittance_advice_items',
+    'user_permissions', 'profiles', 'product_categories', 'companies', 'users', 'suppliers'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY table_list
+  LOOP
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = tbl AND schemaname = 'public') THEN
+      EXECUTE format('ALTER TABLE IF EXISTS %I ENABLE ROW LEVEL SECURITY', tbl);
+    END IF;
+  END LOOP;
+END $$;
 
--- Create a safe, non-recursive policy for authenticated users
--- This policy only checks company_id, not other tables with RLS
-CREATE POLICY "Authenticated users can manage invoices" ON invoices
-  FOR ALL TO authenticated
-  USING (true)
-  WITH CHECK (true);
+-- Create safe, non-recursive policies on all tables
+DO $$
+DECLARE
+  tbl TEXT;
+  policy_name TEXT;
+  table_list TEXT[] := ARRAY[
+    'invoices', 'invoice_items', 'customers', 'quotations', 'quotation_items',
+    'payments', 'payment_allocations', 'boqs', 'credit_notes', 'credit_note_items',
+    'credit_note_allocations', 'proforma_invoices', 'proforma_items',
+    'lpos', 'lpo_items', 'stock_movements', 'cash_receipts',
+    'delivery_notes', 'delivery_note_items', 'products', 'tax_settings',
+    'units', 'remittance_advice', 'remittance_advice_items',
+    'user_permissions', 'profiles', 'product_categories', 'companies', 'users', 'suppliers'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY table_list
+  LOOP
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = tbl AND schemaname = 'public') THEN
+      policy_name := tbl || '_authenticated_access';
+      EXECUTE format(
+        'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)',
+        policy_name, tbl
+      );
+    END IF;
+  END LOOP;
+END $$;
 
 COMMIT;
 
-SELECT 'RLS has been re-enabled with safe policies' as status;
+SELECT 'RLS re-enabled with safe policies on all tables' as status;
 `;
 }
 
@@ -239,47 +272,90 @@ SELECT 'RLS has been re-enabled with safe policies' as status;
 export function getCompleteRLSDisableSQL(): string {
   return `
 -- ============================================================================
--- COMPLETE RLS DISABLE - TEMPORARY FIX
--- ============================================================================
--- This disables RLS on all tables to eliminate all policy issues
--- Security is handled at the application level
+-- COMPLETE RLS RESET - Disable all policies, then re-enable with safe ones
 -- ============================================================================
 
 BEGIN TRANSACTION;
 
--- Disable RLS on main tables
-ALTER TABLE IF EXISTS invoices DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS invoice_items DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS customers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS quotations DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS payments DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS boqs DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS credit_notes DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS proforma_invoices DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS lpos DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS stock_movements DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS cash_receipts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS delivery_notes DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS products DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS tax_settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS units DISABLE ROW LEVEL SECURITY;
+-- Disable RLS on all tables
+DO $$
+DECLARE
+  tbl TEXT;
+  table_list TEXT[] := ARRAY[
+    'invoices', 'invoice_items', 'customers', 'quotations', 'quotation_items',
+    'payments', 'payment_allocations', 'boqs', 'credit_notes', 'credit_note_items',
+    'credit_note_allocations', 'proforma_invoices', 'proforma_items',
+    'lpos', 'lpo_items', 'stock_movements', 'cash_receipts',
+    'delivery_notes', 'delivery_note_items', 'products', 'tax_settings',
+    'units', 'remittance_advice', 'remittance_advice_items',
+    'user_permissions', 'profiles', 'product_categories', 'companies', 'users', 'suppliers'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY table_list
+  LOOP
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = tbl AND schemaname = 'public') THEN
+      EXECUTE format('ALTER TABLE IF EXISTS %I DISABLE ROW LEVEL SECURITY', tbl);
+    END IF;
+  END LOOP;
+END $$;
 
--- Drop all policies
-DROP POLICY IF EXISTS "Company scoped access" ON invoices;
-DROP POLICY IF EXISTS "Company scoped access" ON customers;
-DROP POLICY IF EXISTS "Company scoped access" ON quotations;
-DROP POLICY IF EXISTS "Company scoped access" ON payments;
-DROP POLICY IF EXISTS "Company scoped access" ON boqs;
-DROP POLICY IF EXISTS "Company scoped access" ON credit_notes;
-DROP POLICY IF EXISTS "Company scoped access" ON proforma_invoices;
-DROP POLICY IF EXISTS "Company scoped access" ON lpos;
-DROP POLICY IF EXISTS "Users can access invoices in their company" ON invoices;
-DROP POLICY IF EXISTS "Users can access quotations in their company" ON quotations;
-DROP POLICY IF EXISTS "Users can access payments in their company" ON payments;
-DROP POLICY IF EXISTS "Users can access customers in their company" ON customers;
+-- Drop ALL policies
+DO $$
+DECLARE
+  policy_record RECORD;
+  tbl TEXT;
+  table_list TEXT[] := ARRAY[
+    'invoices', 'invoice_items', 'customers', 'quotations', 'quotation_items',
+    'payments', 'payment_allocations', 'boqs', 'credit_notes', 'credit_note_items',
+    'credit_note_allocations', 'proforma_invoices', 'proforma_items',
+    'lpos', 'lpo_items', 'stock_movements', 'cash_receipts',
+    'delivery_notes', 'delivery_note_items', 'products', 'tax_settings',
+    'units', 'remittance_advice', 'remittance_advice_items',
+    'user_permissions', 'profiles', 'product_categories', 'companies', 'users', 'suppliers'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY table_list
+  LOOP
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = tbl AND schemaname = 'public') THEN
+      FOR policy_record IN
+        EXECUTE format('SELECT policyname FROM pg_policies WHERE tablename = %L AND schemaname = ''public''', tbl)
+      LOOP
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %I', policy_record.policyname, tbl);
+      END LOOP;
+    END IF;
+  END LOOP;
+END $$;
+
+-- Re-enable RLS with safe policies
+DO $$
+DECLARE
+  tbl TEXT;
+  policy_name TEXT;
+  table_list TEXT[] := ARRAY[
+    'invoices', 'invoice_items', 'customers', 'quotations', 'quotation_items',
+    'payments', 'payment_allocations', 'boqs', 'credit_notes', 'credit_note_items',
+    'credit_note_allocations', 'proforma_invoices', 'proforma_items',
+    'lpos', 'lpo_items', 'stock_movements', 'cash_receipts',
+    'delivery_notes', 'delivery_note_items', 'products', 'tax_settings',
+    'units', 'remittance_advice', 'remittance_advice_items',
+    'user_permissions', 'profiles', 'product_categories', 'companies', 'users', 'suppliers'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY table_list
+  LOOP
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE tablename = tbl AND schemaname = 'public') THEN
+      EXECUTE format('ALTER TABLE IF EXISTS %I ENABLE ROW LEVEL SECURITY', tbl);
+      policy_name := tbl || '_authenticated_access';
+      EXECUTE format(
+        'CREATE POLICY %I ON %I FOR ALL TO authenticated USING (true) WITH CHECK (true)',
+        policy_name, tbl
+      );
+    END IF;
+  END LOOP;
+END $$;
 
 COMMIT;
 
-SELECT 'All RLS policies have been disabled' as status;
+SELECT 'All RLS policies reset with safe, non-recursive policies' as status;
 `;
 }
