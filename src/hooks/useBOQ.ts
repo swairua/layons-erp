@@ -123,6 +123,10 @@ export const useConvertBoqToInvoice = () => {
 
       if (!boq) throw new Error('BOQ not found');
 
+      if (boq.converted_to_invoice_id) {
+        throw new Error('BOQ has already been converted to an invoice');
+      }
+
       const boqData = boq.data as BoqDocument;
       if (!boqData) {
         console.error('BOQ data invalid:', { boq });
@@ -286,7 +290,8 @@ export const useConvertBoqToInvoice = () => {
         terms_and_conditions: boq.terms_and_conditions || null,
         created_by: createdBy,
         balance_due: totalAmount,
-        paid_amount: 0
+        paid_amount: 0,
+        display_as_percentage: false
       };
 
       let invoice;
@@ -414,6 +419,7 @@ export const useConvertBoqToInvoice = () => {
       if (updateError) {
         const errorMsg = updateError?.message || updateError?.details || JSON.stringify(updateError);
         console.error('ERROR: Failed to mark BOQ as converted:', { updateError, errorMsg });
+        await supabase.from('invoices').delete().eq('id', invoice.id);
         throw new Error(`Failed to update BOQ status: ${errorMsg}`);
       }
 
