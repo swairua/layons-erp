@@ -101,7 +101,7 @@ export function DashboardSummaryCards({ onDrill }: DashboardSummaryCardsProps) {
     return (
       <Card
         className={cn(
-          "shadow-card cursor-pointer hover:shadow-lg transition-all border-2",
+          "min-w-0 overflow-hidden shadow-card cursor-pointer hover:shadow-lg transition-all border-2",
           classes.border
         )}
         onClick={onClick}
@@ -113,7 +113,7 @@ export function DashboardSummaryCards({ onDrill }: DashboardSummaryCardsProps) {
                 <Icon className={cn("h-5 w-5 shrink-0", classes.icon)} />
                 <p className={cn("min-w-0 break-words text-sm font-medium", classes.text)}>{title}</p>
               </div>
-              <Badge className={cn("shrink-0 whitespace-nowrap px-2 py-1 text-base font-bold sm:px-3 sm:text-lg", classes.badge)}>
+              <Badge className={cn("max-w-full shrink-0 whitespace-normal break-words px-2 py-1 text-base font-bold tabular-nums sm:px-3 sm:text-lg", classes.badge)}>
                 {count}
               </Badge>
             </div>

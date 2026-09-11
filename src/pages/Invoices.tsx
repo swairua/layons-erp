@@ -703,7 +703,7 @@ Website:`;
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card
-          className="shadow-card cursor-pointer hover:shadow-lg transition-shadow border-destructive/20 hover:border-destructive/40"
+          className="min-w-0 overflow-hidden shadow-card cursor-pointer hover:shadow-lg transition-shadow border-destructive/20 hover:border-destructive/40"
           onClick={() => setDueDateStatusFilter(dueDateStatusFilter === 'overdue' ? 'all' : 'overdue')}
         >
           <CardContent className="min-w-0 pt-6">
@@ -713,7 +713,7 @@ Website:`;
                   <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
                   <p className="min-w-0 break-words text-sm font-medium text-destructive">Overdue</p>
                 </div>
-                <Badge variant="destructive" className="shrink-0 whitespace-nowrap px-2 py-1 text-base font-bold sm:px-3 sm:text-lg">
+                <Badge variant="destructive" className="max-w-full shrink-0 whitespace-normal break-words px-2 py-1 text-base font-bold tabular-nums sm:px-3 sm:text-lg">
                   {invoiceSummaryData.overdue}
                 </Badge>
               </div>
@@ -725,7 +725,7 @@ Website:`;
         </Card>
 
         <Card
-          className="shadow-card cursor-pointer hover:shadow-lg transition-shadow border-warning/20 hover:border-warning/40"
+          className="min-w-0 overflow-hidden shadow-card cursor-pointer hover:shadow-lg transition-shadow border-warning/20 hover:border-warning/40"
           onClick={() => setDueDateStatusFilter(dueDateStatusFilter === 'aging' ? 'all' : 'aging')}
         >
           <CardContent className="min-w-0 pt-6">
@@ -735,7 +735,7 @@ Website:`;
                   <Clock className="h-5 w-5 shrink-0 text-warning" />
                   <p className="min-w-0 break-words text-sm font-medium text-warning">Due Soon</p>
                 </div>
-                <Badge variant="secondary" className="shrink-0 whitespace-nowrap px-2 py-1 text-base font-bold sm:px-3 sm:text-lg">
+                <Badge variant="secondary" className="max-w-full shrink-0 whitespace-normal break-words px-2 py-1 text-base font-bold tabular-nums sm:px-3 sm:text-lg">
                   {invoiceSummaryData.aging}
                 </Badge>
               </div>
@@ -747,7 +747,7 @@ Website:`;
         </Card>
 
         <Card
-          className="shadow-card cursor-pointer hover:shadow-lg transition-shadow border-success/20 hover:border-success/40"
+          className="min-w-0 overflow-hidden shadow-card cursor-pointer hover:shadow-lg transition-shadow border-success/20 hover:border-success/40"
           onClick={() => setDueDateStatusFilter(dueDateStatusFilter === 'current' ? 'all' : 'current')}
         >
           <CardContent className="min-w-0 pt-6">

@@ -432,14 +432,14 @@ export default function OptimizedCustomers() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="shadow-card">
+      <div className="grid min-w-0 gap-4 md:grid-cols-4">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
             <div className="flex min-w-0 items-center gap-2">
               <Users className="h-5 w-5 shrink-0 text-primary" />
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm font-medium text-muted-foreground">Total Customers</p>
-                <p className="break-all text-lg font-bold text-primary sm:text-2xl">
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-primary sm:text-2xl">
                   {loadingStats ? '...' : stats?.totalCustomers || 0}
                 </p>
               </div>
@@ -447,13 +447,13 @@ export default function OptimizedCustomers() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
             <div className="flex min-w-0 items-center gap-2">
               <Building2 className="h-5 w-5 shrink-0 text-success" />
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm font-medium text-muted-foreground">Active</p>
-                <p className="break-all text-lg font-bold text-success sm:text-2xl">
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-success sm:text-2xl">
                   {loadingStats ? '...' : stats?.activeCustomers || 0}
                 </p>
               </div>
@@ -461,13 +461,13 @@ export default function OptimizedCustomers() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
             <div className="flex min-w-0 items-center gap-2">
               <CreditCard className="h-5 w-5 shrink-0 text-blue-500" />
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm font-medium text-muted-foreground">With Credit Limit</p>
-                <p className="break-all text-lg font-bold text-blue-600 sm:text-2xl">
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-blue-600 sm:text-2xl">
                   {loadingStats ? '...' : stats?.customersWithCreditLimit || 0}
                 </p>
               </div>
@@ -475,13 +475,13 @@ export default function OptimizedCustomers() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card">
+        <Card className="min-w-0 overflow-hidden shadow-card">
           <CardContent className="pt-6">
             <div className="flex min-w-0 items-center gap-2">
               <DollarSign className="h-5 w-5 shrink-0 text-green-500" />
               <div className="min-w-0 flex-1">
                 <p className="break-words text-sm font-medium text-muted-foreground">Total Credit</p>
-                <p className="break-all text-lg font-bold text-green-600 sm:text-2xl">
+                <p className="min-w-0 break-words text-lg font-bold tabular-nums text-green-600 sm:text-2xl">
                   {loadingStats ? '...' : formatter.format(stats?.totalCreditLimit || 0)}
                 </p>
               </div>
@@ -491,7 +491,7 @@ export default function OptimizedCustomers() {
       </div>
 
       {/* Filters and Search */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardContent className="pt-6">
           <div className="flex items-center space-x-4 flex-wrap gap-4">
             <div className="relative flex-1 min-w-64">
@@ -548,7 +548,7 @@ export default function OptimizedCustomers() {
       </Card>
 
       {/* Customers Table */}
-      <Card className="shadow-card">
+      <Card className="min-w-0 overflow-hidden shadow-card">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Building2 className="h-5 w-5 text-primary" />

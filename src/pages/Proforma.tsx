@@ -220,13 +220,13 @@ export default function Proforma() {
           return (
             <Card
               key={status}
-              className={`shadow-card cursor-pointer hover:shadow-lg transition-shadow ${isActive ? 'ring-2 ring-primary' : ''}`}
+              className={`min-w-0 overflow-hidden shadow-card cursor-pointer hover:shadow-lg transition-shadow ${isActive ? 'ring-2 ring-primary' : ''}`}
               onClick={() => setStatusFilter(isActive ? 'all' : status)}
             >
-              <CardContent className="pt-6">
+              <CardContent className="min-w-0 pt-6">
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-muted-foreground capitalize">{status}</p>
-                  <p className="text-2xl font-bold">{count}</p>
+                  <p className="min-w-0 break-words text-xl font-bold tabular-nums sm:text-2xl">{count}</p>
                   <p className="text-xs text-muted-foreground">{isActive ? 'Filtering...' : 'Click to filter'}</p>
                 </div>
               </CardContent>

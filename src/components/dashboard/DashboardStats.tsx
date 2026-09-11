@@ -15,6 +15,7 @@ interface StatCardProps {
 function StatCard({ title, value, change, changeType, icon: Icon, alert }: StatCardProps) {
   return (
     <Card className={cn(
+      "min-w-0 overflow-hidden",
       "shadow-card hover:shadow-dropdown transition-smooth",
       alert && "border-l-4 border-l-warning"
     )}>
@@ -28,7 +29,7 @@ function StatCard({ title, value, change, changeType, icon: Icon, alert }: StatC
         )} />
       </CardHeader>
       <CardContent className="min-w-0">
-        <div className="break-all text-lg font-bold sm:text-2xl">{value}</div>
+        <div className="min-w-0 break-words text-lg font-bold tabular-nums sm:text-2xl">{value}</div>
         {change && (
           <div className="flex items-center text-xs text-muted-foreground mt-1">
             {changeType === 'increase' && (
