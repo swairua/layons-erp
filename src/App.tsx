@@ -70,7 +70,7 @@ const CompanyIdConsolidation = lazyWithRetry(() => import("./pages/CompanyIdCons
 
 export type AppErrorKind = 'module' | 'render';
 
-export const isLazyModuleError = (error: Error): boolean => {
+const isLazyModuleError = (error: Error): boolean => {
   const message = error.message.toLowerCase();
   return error.name === 'ChunkLoadError' ||
     message.includes('dynamically imported module') ||
@@ -108,14 +108,14 @@ export class AppErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      return <AppErrorFallback kind={this.state.errorKind || 'render'} />;
+      return <AppErrorFallback kind={this.state.errorKind || 'render'} error={this.state.error} />;
     }
 
     return this.props.children;
   }
 }
 
-const AppErrorFallback = ({ kind }: { kind: AppErrorKind }) => {
+const AppErrorFallback = ({ kind, error }: { kind: AppErrorKind; error: Error | null }) => {
   const isModuleError = kind === 'module';
 
   return (
@@ -130,6 +130,9 @@ const AppErrorFallback = ({ kind }: { kind: AppErrorKind }) => {
               ? 'This page update did not finish loading. Retry the current page, or return to the home page.'
               : 'The application encountered an unexpected error. Reload the page or return to the home page.'}
           </p>
+          {import.meta.env.DEV && error?.name && (
+            <p className="text-xs text-muted-foreground">Error type: {error.name}</p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
