@@ -158,7 +158,8 @@ export default function Payments() {
   });
   const payments = paymentData?.data || [];
   const totalPayments = paymentData?.total || 0;
-  const { data: invoices = [] } = useInvoices(currentCompany?.id, { fetchAll: false, page: 1, pageSize: 500 });
+  const { data: invoicesData } = useInvoices(currentCompany?.id, { fetchAll: false, page: 1, pageSize: 500 });
+  const invoices = invoicesData?.data || [];
   const deletePayment = useDeletePayment();
   const { data: paymentSummary } = usePaymentSummary(currentCompany?.id);
 
