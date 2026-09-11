@@ -36,6 +36,7 @@ import { generateCustomerStatementPDF } from '@/utils/pdfGenerator';
 import { exportCustomerStatementsToCSV, exportCustomerStatementSummaryToCSV } from '@/utils/csvExporter';
 import CustomerStatementPreviewModal from '@/components/statements/CustomerStatementPreviewModal';
 import { toCollection } from '@/utils/collection';
+import { formatCurrency } from '@/utils/currencyFormatter';
 
 interface CustomerStatement {
   customer_id: string;
@@ -68,6 +69,7 @@ export default function CustomerStatements() {
   const { data: paymentResponse } = usePayments(companyId, { fetchAll: true });
   const invoices = toCollection(invoiceResponse);
   const payments = toCollection(paymentResponse);
+  const formatAmount = (amount?: number | null) => formatCurrency(amount ?? 0, currentCompany?.currency);
 
   // Calculate customer statements
   const calculateCustomerStatements = (): CustomerStatement[] => {
@@ -353,7 +355,7 @@ export default function CustomerStatements() {
               <DollarSign className="h-8 w-8 text-warning" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Outstanding</p>
-                <p className="text-lg font-bold text-warning">${totalOutstanding.toFixed(2)}</p>
+                <p className="text-lg font-bold text-warning">{formatAmount(totalOutstanding)}</p>
                 <p className="text-xs text-muted-foreground">{filteredStatements.length} customers</p>
               </div>
             </div>
@@ -366,7 +368,7 @@ export default function CustomerStatements() {
               <AlertCircle className="h-8 w-8 text-destructive" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Overdue Amount</p>
-                <p className="text-lg font-bold text-destructive">${totalOverdue.toFixed(2)}</p>
+                <p className="text-lg font-bold text-destructive">{formatAmount(totalOverdue)}</p>
                 <p className="text-xs text-destructive">{overdueCustomers} customers overdue</p>
               </div>
             </div>
@@ -379,7 +381,7 @@ export default function CustomerStatements() {
               <CheckCircle className="h-8 w-8 text-success" />
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Current Due</p>
-                <p className="text-lg font-bold text-success">${totalCurrent.toFixed(2)}</p>
+                <p className="text-lg font-bold text-success">{formatAmount(totalCurrent)}</p>
                 <p className="text-xs text-success">Within terms</p>
               </div>
             </div>
@@ -526,7 +528,7 @@ export default function CustomerStatements() {
                       </TableCell>
                       <TableCell>
                         <div className="font-medium">
-                          ${statement.total_outstanding.toFixed(2)}
+                          {formatAmount(statement.total_outstanding)}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {statement.invoice_count} invoices
@@ -534,12 +536,12 @@ export default function CustomerStatements() {
                       </TableCell>
                       <TableCell>
                         <span className={statement.current_due > 0 ? 'text-warning' : 'text-muted-foreground'}>
-                          ${statement.current_due.toFixed(2)}
+                          {formatAmount(statement.current_due)}
                         </span>
                       </TableCell>
                       <TableCell>
                         <span className={statement.overdue_amount > 0 ? 'text-destructive font-medium' : 'text-muted-foreground'}>
-                          ${statement.overdue_amount.toFixed(2)}
+                          {formatAmount(statement.overdue_amount)}
                         </span>
                       </TableCell>
                       <TableCell>
@@ -558,7 +560,7 @@ export default function CustomerStatements() {
                               {new Date(statement.last_payment_date).toLocaleDateString()}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              ${statement.last_payment_amount?.toFixed(2)}
+                              {formatAmount(statement.last_payment_amount)}
                             </div>
                           </div>
                         ) : (
