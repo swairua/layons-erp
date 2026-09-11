@@ -68,73 +68,84 @@ const AuditLogs = lazyWithRetry(() => import("./pages/AuditLogs"));
 const DatabaseFix = lazyWithRetry(() => import("./pages/DatabaseFix"));
 const CompanyIdConsolidation = lazyWithRetry(() => import("./pages/CompanyIdConsolidation"));
 
-// Error boundary class component to catch module loading errors
+export type AppErrorKind = 'module' | 'render';
+
+export const isLazyModuleError = (error: Error): boolean => {
+  const message = error.message.toLowerCase();
+  return error.name === 'ChunkLoadError' ||
+    message.includes('dynamically imported module') ||
+    message.includes('failed to fetch dynamically imported') ||
+    message.includes('importing a module script failed') ||
+    message.includes('loading chunk');
+};
+
+// Error boundary class component to catch module loading and render errors
 export class AppErrorBoundary extends Component<
   { children: ReactNode },
-  { hasError: boolean; error: Error | null }
+  { hasError: boolean; error: Error | null; errorKind: AppErrorKind | null }
 > {
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorKind: null };
   }
 
   static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+    return {
+      hasError: true,
+      error,
+      errorKind: isLazyModuleError(error) ? 'module' : 'render',
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('App Error:', error, errorInfo);
-
-    const isModuleError =
-      error.message.includes('dynamically imported module') ||
-      error.message.includes('Failed to fetch') ||
-      error.message.includes('network');
-
-    if (isModuleError) {
-      console.warn('Module loading error detected after retry attempts:', error.message);
-    }
+    const errorKind = isLazyModuleError(error) ? 'module' : 'render';
+    console.error('[AppErrorBoundary] Application error', {
+      kind: errorKind,
+      message: error.message,
+      componentStack: errorInfo.componentStack,
+    });
   }
 
   render() {
     if (this.state.hasError) {
-      return <ModuleErrorFallback />;
+      return <AppErrorFallback kind={this.state.errorKind || 'render'} />;
     }
 
     return this.props.children;
   }
 }
 
-// Error recovery component for module loading failures
-const ModuleErrorFallback = () => {
-  const handleRetry = () => {
-    window.location.reload();
-  };
+const AppErrorFallback = ({ kind }: { kind: AppErrorKind }) => {
+  const isModuleError = kind === 'module';
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
       <div className="max-w-md w-full p-6 space-y-4">
         <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">This page could not be loaded</h1>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isModuleError ? 'This page could not be loaded' : 'Something went wrong'}
+          </h1>
           <p className="text-muted-foreground">
-            The connection was interrupted while loading this page. Try again or return to the home page.
+            {isModuleError
+              ? 'This page update did not finish loading. Retry the current page, or return to the home page.'
+              : 'The application encountered an unexpected error. Reload the page or return to the home page.'}
           </p>
         </div>
 
         <div className="flex flex-col gap-2">
           <button
-            onClick={handleRetry}
+            onClick={() => window.location.reload()}
             className="w-full px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors font-medium"
           >
-            Try again
+            {isModuleError ? 'Retry current page' : 'Reload page'}
           </button>
           <button
-            onClick={() => window.location.href = '/'}
+            onClick={() => { window.location.href = '/'; }}
             className="w-full px-4 py-2 bg-muted text-foreground rounded hover:bg-muted/80 transition-colors font-medium"
           >
             Go to Home Page
           </button>
         </div>
-
       </div>
     </div>
   );
