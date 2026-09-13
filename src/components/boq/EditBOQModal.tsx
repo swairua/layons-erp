@@ -43,6 +43,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { saveEditingDraft, loadEditDraft, deleteEditDraft } from '@/services/boqAutoSaveService';
 import { toCollection } from '@/utils/collection';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 // Safe UUID generator that works in all environments
 const generateSafeUUID = (): string => {
@@ -137,12 +139,23 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess, company }: Ed
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [showCalculatedValuesInTerms, setShowCalculatedValuesInTerms] = useState(false);
-  const [currency, setCurrency] = useState('KES');
+  const [currency, setCurrency] = useState(boq?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [taxAmount, setTaxAmount] = useState<number | ''>('');
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [boqStatus, setBoqStatus] = useState('draft');
   const [sections, setSections] = useState<BOQSectionRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, setSections, sections });
 
   const selectedClient = useMemo(() => customers.find(c => c.id === clientId), [customers, clientId]);
 
@@ -745,12 +758,15 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess, company }: Ed
                   <SelectItem value="GBP">GBP - British Pound</SelectItem>
                 </SelectContent>
               </Select>
-              {boq.currency && boq.currency !== (currentCompany?.currency || 'KES') && boq.exchange_rate && boq.exchange_rate > 0 && (
+              {isForeignCurrency && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                  <span>
-                    1 {boq.currency} = {boq.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
-                    <span className="text-xs ml-1">(rate locked at creation)</span>
-                  </span>
+                  {rateLoading ? (
+                    <span>Fetching exchange rate...</span>
+                  ) : (
+                    <span>
+                      1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

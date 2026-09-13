@@ -35,6 +35,9 @@ import { useCreateQuotationWithItems } from '@/hooks/useQuotationItems';
 import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { toCollection } from '@/utils/collection';
+import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface ProformaItem {
   id: string;
@@ -59,6 +62,8 @@ interface Proforma {
   subtotal: number;
   tax_amount: number;
   total_amount: number;
+  currency?: string;
+  exchange_rate?: number;
   notes?: string;
   terms_and_conditions?: string;
   customers?: {
@@ -93,6 +98,8 @@ export const EditProformaModal = ({
   });
 
   const [items, setItems] = useState<ProformaItem[]>([]);
+  const [currency, setCurrency] = useState(proforma?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [previewItem, setPreviewItem] = useState<string | null>(null);
@@ -103,6 +110,15 @@ export const EditProformaModal = ({
   const { data: productsResponse } = useProducts(companyId);
   const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(companyId);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, items, setItems });
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 
@@ -117,6 +133,8 @@ export const EditProformaModal = ({
         terms_and_conditions: proforma.terms_and_conditions || '',
         status: proforma.status,
       });
+
+      setCurrency(proforma?.currency || currentCompany?.currency || 'KES');
       
       if (proforma.proforma_items) {
         setItems(proforma.proforma_items.map(item => ({
@@ -349,14 +367,32 @@ export const EditProformaModal = ({
             </div>
           </div>
 
-          {(proforma as any).currency && (proforma as any).currency !== (currentCompany?.currency || 'KES') && (proforma as any).exchange_rate && (proforma as any).exchange_rate > 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>
-                1 {(proforma as any).currency} = {(proforma as any).exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
-                <span className="text-xs ml-1">(rate locked at creation)</span>
-              </span>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Currency</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCY_SELECT_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isForeignCurrency && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                {rateLoading ? (
+                  <span>Fetching exchange rate...</span>
+                ) : (
+                  <span>
+                    1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Items Section */}
           <Card>

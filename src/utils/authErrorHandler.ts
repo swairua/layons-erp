@@ -246,12 +246,3 @@ export function handleAuthError(error: AuthError | Error): AuthErrorInfo {
 
   return errorInfo;
 }
-
-export const DEFAULT_ADMIN_CREDENTIALS = {
-  email: 'info@construction.com',
-  password: 'Password123'
-};
-
-export function getAdminCredentialsHelp(): string {
-  return `Default admin credentials:\nEmail: ${DEFAULT_ADMIN_CREDENTIALS.email}\nPassword: ${DEFAULT_ADMIN_CREDENTIALS.password}`;
-}

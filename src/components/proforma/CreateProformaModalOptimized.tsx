@@ -37,6 +37,7 @@ import { ProformaErrorSolution } from '@/components/fixes/ProformaErrorSolution'
 import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { toCollection } from '@/utils/collection';
 
 interface CreateProformaModalOptimizedProps {
@@ -81,10 +82,18 @@ export const CreateProformaModalOptimized = ({
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
 
   useEffect(() => {
+    if (open && currentCompany?.currency) {
+      setCurrency(currentCompany.currency);
+    }
+  }, [open, currentCompany?.currency]);
+
+  useEffect(() => {
     if (!rateLoading && fetchedRate > 0) {
       setExchangeRate(fetchedRate);
     }
   }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, items, setItems });
 
   const defaultTaxRate = taxSettings?.find(t => t.is_default)?.rate || 0;
 

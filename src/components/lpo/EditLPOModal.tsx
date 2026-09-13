@@ -33,6 +33,9 @@ import { useUpdateLPOWithItems, useAllSuppliersAndCustomers, useProducts, useCom
 import { toast } from '@/utils/safeToast';
 import { validateLPOEdit } from '@/utils/lpoValidation';
 import { toCollection } from '@/utils/collection';
+import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 function formatErrorMessage(error: any): string {
   if (!error) return 'Unknown error occurred';
@@ -81,6 +84,8 @@ export const EditLPOModal = ({
   });
 
   const [items, setItems] = useState<LPOItem[]>([]);
+  const [currency, setCurrency] = useState(lpo?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,6 +97,15 @@ export const EditLPOModal = ({
   const { data: productsResponse } = useProducts(currentCompany?.id);
   const products = toCollection(productsResponse);
   const updateLPOWithItems = useUpdateLPOWithItems();
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, items, setItems });
 
   useEffect(() => {
     if (lpo && open) {
@@ -106,6 +120,8 @@ export const EditLPOModal = ({
         terms_and_conditions: lpo.terms_and_conditions || '',
         status: lpo.status || 'draft',
       });
+
+      setCurrency(lpo.currency || currentCompany?.currency || 'KES');
 
       if (lpo.lpo_items) {
         const lpoItems: LPOItem[] = lpo.lpo_items.map((item: any) => ({
@@ -338,14 +354,32 @@ export const EditLPOModal = ({
             </div>
           </div>
 
-          {lpo.currency && lpo.currency !== (currentCompany?.currency || 'KES') && lpo.exchange_rate && lpo.exchange_rate > 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>
-                1 {lpo.currency} = {lpo.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
-                <span className="text-xs ml-1">(rate locked at creation)</span>
-              </span>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Currency</Label>
+            <Select value={currency} onValueChange={setCurrency}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCY_SELECT_OPTIONS.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {isForeignCurrency && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                {rateLoading ? (
+                  <span>Fetching exchange rate...</span>
+                ) : (
+                  <span>
+                    1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">

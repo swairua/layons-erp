@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { saveBoqDraft, loadBoqDraft, deleteDraft, isDraftStale } from '@/services/boqAutoSaveService';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { toCollection } from '@/utils/collection';
 
 // Safe UUID generator that works in all environments
@@ -153,10 +154,13 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       setExchangeRate(fetchedRate);
     }
   }, [fetchedRate, rateLoading]);
+
   const [boqStatus, setBoqStatus] = useState('draft');
   const [attachmentUrl, setAttachmentUrl] = useState('');
   const [sections, setSections] = useState<BOQSectionRow[]>([defaultSection()]);
   const [submitting, setSubmitting] = useState(false);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, setSections, sections });
 
   // Update BOQ number when modal opens
   useEffect(() => {

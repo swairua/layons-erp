@@ -493,7 +493,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [user]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    console.info('[AuthContext] Sign-in started: requesting credentials');
     const hardTimeoutId = setTimeout(() => {
       if (mountedRef.current) {
         setLoading(false);
@@ -509,7 +508,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }, 'signIn');
 
     if (error) {
-      console.error(`❌ [AuthContext] Sign-in error:`, error);
       clearTimeout(hardTimeoutId);
       setLoading(false);
       // Ensure error is a proper Error object with a message property
@@ -519,7 +517,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (data?.error) {
-      console.error(`❌ [AuthContext] Sign-in returned error:`, data.error);
       clearTimeout(hardTimeoutId);
       setLoading(false);
       // Ensure error is a proper Error object with a message property
@@ -532,17 +529,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const session = (data as any)?.session ?? (data as any)?.data?.session;
       const signedInUser = session?.user;
-      console.info('[AuthContext] Credentials accepted: session established', {
-        hasSession: !!session,
-        hasUser: !!signedInUser,
-      });
       if (signedInUser) {
-        // Check if token is stored in localStorage
-        try {
-          const storedToken = window.localStorage?.getItem('sb-auth-token');
-        } catch (e) {
-        }
-
         setSession(session);
         setUser(signedInUser);
         setProfileReady(false);
@@ -563,14 +550,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (mountedRef.current) {
             if (userProfile) {
-              console.info('[AuthContext] Profile and permissions loaded');
               if (userProfile.email) {
                 userProfile.email = userProfile.email.toLowerCase();
               }
               setProfile(userProfile);
               setProfileReady(true);
             } else {
-              console.warn('[AuthContext] Profile unavailable; using fallback profile');
               // Create minimal profile as fallback to allow app to function
               const fallbackProfile: UserProfile = {
                 id: signedInUser.id,
@@ -613,7 +598,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           }
         } catch (profileError) {
-          console.error('❌ Error during profile fetch in signIn:', profileError);
           // Ensure we clear loading even if profile fetch fails
           setLoading(false);
           // Create minimal fallback profile
@@ -638,10 +622,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: new Error(errorMessage) as AuthError, session: null };
       }
     } catch (error) {
-      console.error('❌ Unexpected error in signIn:', {
-        message: error instanceof Error ? error.message : String(error),
-        error
-      });
       clearTimeout(hardTimeoutId);
       setLoading(false);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during sign in';

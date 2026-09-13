@@ -40,6 +40,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface QuotationItem {
   id: string;
@@ -76,7 +78,8 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [quotationDate, setQuotationDate] = useState('');
   const [validUntil, setValidUntil] = useState('');
-  const [currency, setCurrency] = useState('KES');
+  const [currency, setCurrency] = useState(quotation?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
   
@@ -92,6 +95,15 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
   const { data: productsResponse, isLoading: loadingProducts } = useProducts(currentCompany?.id);
   const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, setSections, sections });
 
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
   const defaultTaxRate = defaultTax?.rate || 16;
@@ -619,12 +631,15 @@ export function EditQuotationModal({ open, onOpenChange, onSuccess, quotation }:
                       ))}
                     </SelectContent>
                   </Select>
-                  {quotation?.currency && quotation.currency !== (currentCompany?.currency || 'KES') && quotation.exchange_rate && quotation.exchange_rate > 0 && (
+                  {isForeignCurrency && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <span>
-                        1 {quotation.currency} = {quotation.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
-                        <span className="text-xs ml-1">(rate locked at creation)</span>
-                      </span>
+                      {rateLoading ? (
+                        <span>Fetching exchange rate...</span>
+                      ) : (
+                        <span>
+                          1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

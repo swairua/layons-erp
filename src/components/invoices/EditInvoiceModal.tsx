@@ -38,6 +38,8 @@ import { useCurrentCompany } from '@/contexts/CompanyContext';
 import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { toCollection } from '@/utils/collection';
 
 interface InvoiceItem {
@@ -73,7 +75,8 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [currency, setCurrency] = useState('KES');
+  const [currency, setCurrency] = useState(invoice?.currency || 'KES');
+  const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [lpoNumber, setLpoNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [termsAndConditions, setTermsAndConditions] = useState('');
@@ -92,6 +95,15 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
   const products = toCollection(productsResponse);
   const { data: taxSettings } = useTaxSettings(currentCompany?.id);
   const updateInvoiceWithItems = useUpdateInvoiceWithItems();
+  const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
+
+  useEffect(() => {
+    if (!rateLoading && fetchedRate > 0) {
+      setExchangeRate(fetchedRate);
+    }
+  }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, setSections, sections });
 
   // Get default tax rate
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
@@ -560,12 +572,15 @@ export function EditInvoiceModal({ open, onOpenChange, onSuccess, invoice }: Edi
                       ))}
                     </SelectContent>
                   </Select>
-                  {invoice.currency && invoice.currency !== (currentCompany?.currency || 'KES') && invoice.exchange_rate && invoice.exchange_rate > 0 && (
+                  {isForeignCurrency && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <span>
-                        1 {invoice.currency} = {invoice.exchange_rate?.toFixed(4)} {currentCompany?.currency || 'KES'}
-                        <span className="text-xs ml-1">(rate locked at creation)</span>
-                      </span>
+                      {rateLoading ? (
+                        <span>Fetching exchange rate...</span>
+                      ) : (
+                        <span>
+                          1 {currency} = {exchangeRate.toFixed(4)} {currentCompany?.currency || 'KES'}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

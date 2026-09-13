@@ -41,6 +41,7 @@ import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { toNumber, toInteger } from '@/utils/numericFormHelpers';
 import { supabase } from '@/integrations/supabase/client';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { toCollection } from '@/utils/collection';
 
 interface QuotationItem {
@@ -100,7 +101,7 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
   const { rate: fetchedRate, isLoading: rateLoading, isForeignCurrency } = useExchangeRate(currency, currentCompany?.currency || 'KES');
 
   useEffect(() => {
-    if (open && currentCompany?.currency && currency === 'KES') {
+    if (open && currentCompany?.currency) {
       setCurrency(currentCompany.currency);
     }
   }, [open, currentCompany?.currency]);
@@ -110,6 +111,8 @@ export function CreateQuotationModal({ open, onOpenChange, onSuccess }: CreateQu
       setExchangeRate(fetchedRate);
     }
   }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, setSections, sections });
 
   // Initialize with a default section when modal opens
   useEffect(() => {

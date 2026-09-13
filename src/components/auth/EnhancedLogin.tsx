@@ -7,14 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { toast } from '@/utils/safeToast';
 import { handleAuthError } from '@/utils/authErrorHandler';
-import { useNavigate } from 'react-router-dom';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export function EnhancedLogin() {
   const { signIn, loading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const navigate = useNavigate();
-  const location = useLocation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -55,11 +51,8 @@ export function EnhancedLogin() {
         handleAuthError(error);
         setSubmitting(false);
       } else if (session?.user) {
-        console.info('[EnhancedLogin] Session confirmed; navigating to home');
-        navigate('/', { replace: true });
         setSubmitting(false);
       } else {
-        console.error('[EnhancedLogin] Sign-in completed without a session');
         toast.error('Sign-in could not be completed. Please try again.');
         setSubmitting(false);
       }
@@ -80,10 +73,6 @@ export function EnhancedLogin() {
         }
       }
 
-      console.error('Unexpected sign in error:', {
-        message: unexpectedError instanceof Error ? unexpectedError.message : String(unexpectedError),
-        error: unexpectedError
-      });
       toast.error(errorMessage || 'An unexpected error occurred. Please try again.');
       setSubmitting(false);
     }
@@ -121,92 +110,83 @@ export function EnhancedLogin() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <Tabs value={'login'}>
-            <TabsList className="w-full">
-              <TabsTrigger value="login" className="flex-1">Sign In</TabsTrigger>
-            </TabsList>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleInputChange('email')}
+                  className={`pl-10 ${formErrors.email ? 'border-destructive' : ''}`}
+                  disabled={submitting}
+                />
+              </div>
+              {formErrors.email && (
+                <p className="text-sm text-destructive">{formErrors.email}</p>
+              )}
+            </div>
 
-            <TabsContent value="login">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={formData.email}
-                      onChange={handleInputChange('email')}
-                      className={`pl-10 ${formErrors.email ? 'border-destructive' : ''}`}
-                      disabled={submitting}
-                    />
-                  </div>
-                  {formErrors.email && (
-                    <p className="text-sm text-destructive">{formErrors.email}</p>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleInputChange('password')}
+                  className={`pl-10 pr-10 ${formErrors.password ? 'border-destructive' : ''}`}
+                  disabled={submitting}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={submitting}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
                   )}
-                </div>
+                </Button>
+              </div>
+              {formErrors.password && (
+                <p className="text-sm text-destructive">{formErrors.password}</p>
+              )}
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={formData.password}
-                      onChange={handleInputChange('password')}
-                      className={`pl-10 pr-10 ${formErrors.password ? 'border-destructive' : ''}`}
-                      disabled={submitting}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-1 top-1/2 h-8 w-8 -translate-y-1/2"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={submitting}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  {formErrors.password && (
-                    <p className="text-sm text-destructive">{formErrors.password}</p>
-                  )}
-                </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={submitting}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
+            </Button>
+          </form>
 
-                <div className="space-y-2">
-                  <Button
-                    type="submit"
-                    className="w-full"
-                    disabled={submitting}
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      'Sign In'
-                    )}
-                  </Button>
-
-                </div>
-              </form>
-
-            </TabsContent>
-
-          </Tabs>
-
-          <div className="text-center space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Contact your administrator if you need account access.
-            </p>
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-sm text-primary hover:underline"
+              onClick={() => toast.info('Please contact your administrator to reset your password.')}
+            >
+              Forgot your password?
+            </button>
           </div>
         </CardContent>
       </Card>

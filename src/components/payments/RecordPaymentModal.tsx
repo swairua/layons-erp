@@ -41,6 +41,7 @@ import { PaymentAllocationQuickFix } from './PaymentAllocationQuickFix';
 import { autoCreateCashReceipt } from '@/utils/autoCreateCashReceipt';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface RecordPaymentModalProps {
   open: boolean;
@@ -80,6 +81,13 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
     }
   }, [fetchedRate, rateLoading]);
 
+  useCurrencyConversion({
+    exchangeRate,
+    isOpen: open,
+    amount: paymentData.amount,
+    setAmount: (v) => setPaymentData(prev => ({ ...prev, amount: v })),
+  });
+
   // Reset allocation failed state when modal closes
   useEffect(() => {
     if (!open) {
@@ -101,7 +109,7 @@ export function RecordPaymentModal({ open, onOpenChange, onSuccess, invoice }: R
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'KES',
+      currency: currency || 'KES',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(amount);

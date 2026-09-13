@@ -36,6 +36,7 @@ import {
 import { useCustomers, useGenerateDocumentNumber, useTaxSettings, useCompanies, useProducts } from '@/hooks/useDatabase';
 import { useCreateInvoiceWithItems } from '@/hooks/useQuotationItems';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { CURRENCY_SELECT_OPTIONS } from '@/utils/getCurrencySelectOptions';
@@ -106,12 +107,20 @@ export function CreateInvoiceModal({ open, onOpenChange, onSuccess, preSelectedC
   const createInvoiceWithItems = useCreateInvoiceWithItems();
   const generateDocNumber = useGenerateDocumentNumber();
 
+  useEffect(() => {
+    if (open && currentCompany?.currency) {
+      setCurrency(currentCompany.currency);
+    }
+  }, [open, currentCompany?.currency]);
+
   // Sync exchange rate when fetched
   useEffect(() => {
     if (!rateLoading && fetchedRate > 0) {
       setExchangeRate(fetchedRate);
     }
   }, [fetchedRate, rateLoading]);
+
+  useCurrencyConversion({ exchangeRate, isOpen: open, setSections, sections });
 
   // Get default tax rate
   const defaultTax = taxSettings?.find(tax => tax.is_default && tax.is_active);
