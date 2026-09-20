@@ -604,7 +604,7 @@ export const useBOQs = (companyId?: string, selectFields?: string) => {
     enabled: !!companyId,
     queryFn: async () => {
       if (!companyId) return [];
-      const fields = selectFields || 'id, number, boq_date, due_date, client_name, project_title, currency, status, total_amount, subtotal, tax_amount, terms_and_conditions, showCalculatedValuesInTerms, client_email, client_phone, client_address, client_city, client_country, contractor, converted_to_invoice_id, created_at, updated_at, data';
+      const fields = selectFields || 'id, number, boq_date, due_date, client_name, project_title, currency, exchange_rate, status, total_amount, subtotal, tax_amount, terms_and_conditions, showCalculatedValuesInTerms, client_email, client_phone, client_address, client_city, client_country, contractor, converted_to_invoice_id, created_at, updated_at, data';
       const { data, error } = await supabase
         .from('boqs')
         .select(fields)
@@ -627,7 +627,7 @@ export interface BOQListFilters {
   conversionStatus?: 'all' | 'converted' | 'unconverted';
 }
 
-const BOQ_LIST_FIELDS = 'id, number, boq_date, due_date, client_name, project_title, currency, status, total_amount, subtotal, tax_amount, client_email, client_phone, client_address, client_city, client_country, contractor, converted_to_invoice_id, created_at, updated_at, created_by';
+const BOQ_LIST_FIELDS = 'id, number, boq_date, due_date, client_name, project_title, currency, exchange_rate, status, total_amount, subtotal, tax_amount, client_email, client_phone, client_address, client_city, client_country, contractor, converted_to_invoice_id, created_at, updated_at, created_by';
 
 const localDateString = (date: Date) => {
   const year = date.getFullYear();
@@ -1106,7 +1106,7 @@ export const usePayments = (
           .from('payments')
           .select(`
             id, company_id, customer_id, payment_number, payment_date,
-            amount, payment_method, reference_number, notes, created_at, updated_at
+            amount, currency, exchange_rate, payment_method, reference_number, notes, created_at, updated_at
           `, { count: fetchAll ? undefined : 'exact' })
           .eq('company_id', companyId)
           .order('payment_date', { ascending: false })

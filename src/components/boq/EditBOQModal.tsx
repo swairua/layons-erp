@@ -638,6 +638,7 @@ export function EditBOQModal({ open, onOpenChange, boq, onSuccess, company }: Ed
         contractor: contractor || null,
         project_title: projectTitle || null,
         currency: currency,
+        exchange_rate: exchangeRate,
         subtotal: filledSubtotal,
         tax_amount: finalTaxAmount,
         total_amount: finalTotal,

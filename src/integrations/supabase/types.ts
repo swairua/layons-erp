@@ -83,6 +83,7 @@ export type Database = {
           contractor: string | null
           project_title: string | null
           currency: string | null
+          exchange_rate: number | null
           subtotal: number | null
           tax_amount: number | null
           total_amount: number
@@ -112,6 +113,7 @@ export type Database = {
           contractor?: string | null
           project_title?: string | null
           currency?: string | null
+          exchange_rate?: number | null
           subtotal?: number | null
           tax_amount?: number | null
           total_amount: number
@@ -141,6 +143,7 @@ export type Database = {
           contractor?: string | null
           project_title?: string | null
           currency?: string | null
+          exchange_rate?: number | null
           subtotal?: number | null
           tax_amount?: number | null
           total_amount?: number
