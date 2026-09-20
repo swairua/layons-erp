@@ -24,7 +24,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, Calculator, Layers, Check, Loader2 } from 'lucide-react';
-import { useCustomers, useUnits, useBOQs } from '@/hooks/useDatabase';
+import { useCustomers, useUnits, useBOQs, useGenerateDocumentNumber } from '@/hooks/useDatabase';
 import { CreateUnitModal } from '@/components/units/CreateUnitModal';
 import { BOQSaveIndicator } from '@/components/boq/BOQSaveIndicator';
 import { toast } from 'sonner';
@@ -108,6 +108,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   const { data: units = [] } = useUnits(currentCompany?.id);
   const { data: existingBOQs = [] } = useBOQs(currentCompany?.id, 'id, number');
   const { profile, loading: authLoading } = useAuth();
+  const generateDocNumber = useGenerateDocumentNumber();
 
   const [unitModalOpen, setUnitModalOpen] = useState(false);
   const [pendingUnitTarget, setPendingUnitTarget] = useState<{ sectionId: string; itemId: string } | null>(null);
@@ -619,78 +620,69 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       return;
     }
 
-    let currentNumber = boqNumber;
     let insertedId: string | null = null;
     let insertedDoc: BoqDocument = doc;
-    const MAX_RETRIES = 3;
 
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      // Build payload with current number
-      const finalTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
-      const finalTotal = filledSubtotal + finalTaxAmount;
-      const payload = {
-        company_id: currentCompany.id,
-        number: currentNumber,
-        boq_date: boqDate,
-        due_date: dueDate,
-        client_name: selectedClient.name,
-        client_email: selectedClient.email || null,
-        client_phone: selectedClient.phone || null,
-        client_address: selectedClient.address || null,
-        client_city: selectedClient.city || null,
-        client_country: selectedClient.country || null,
-        contractor: contractor || null,
-        project_title: projectTitle || null,
-        currency: currency,
-        exchange_rate: exchangeRate,
-        subtotal: filledSubtotal,
-        tax_amount: finalTaxAmount,
-        total_amount: finalTotal,
-        attachment_url: attachmentUrl || null,
-        data: { ...insertedDoc, number: currentNumber },
-        terms_and_conditions: termsAndConditions || null,
-        showCalculatedValuesInTerms: showCalculatedValuesInTerms,
-        created_by: profile?.id || null,
-        status: boqStatus,
-      };
-
-      console.log(`[handleGenerate] Attempt ${attempt + 1}: Inserting BOQ with number ${currentNumber}`);
-
-      const { data: insertedBOQ, error: insertError } = await supabase.from('boqs').insert([payload]).select('id');
-      if (insertError) {
-        let errorMsg = 'Unknown error';
-        if (insertError instanceof Error) {
-          errorMsg = insertError.message;
-        } else if (typeof insertError === 'object' && insertError !== null) {
-          errorMsg = (insertError as any).message || (insertError as any).details || JSON.stringify(insertError);
-        }
-
-        const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('unique');
-        if (isDuplicate && attempt < MAX_RETRIES - 1) {
-          console.warn(`[handleGenerate] BOQ number "${currentNumber}" conflict, retrying with new number`);
-          invalidateBOQNumberCache(currentCompany.id);
-          currentNumber = await generateNextBOQNumber(existingBOQs, currentCompany.id);
-          setBoqNumber(currentNumber);
-          continue;
-        }
-
-        if (isDuplicate) {
-          toast.error(`BOQ number "${currentNumber}" already exists — please try again`);
-        } else {
-          toast.error(`Failed to save BOQ: ${errorMsg}`);
-        }
-        return;
-      }
-
-      if (!insertedBOQ || insertedBOQ.length === 0) {
-        console.error('BOQ created but no ID returned');
-        toast.error('BOQ saved but no ID returned from database');
-        return;
-      }
-
-      insertedId = insertedBOQ[0].id;
-      break;
+    // Generate number server-side to prevent race conditions
+    let currentNumber: string;
+    try {
+      currentNumber = await generateDocNumber.mutateAsync({
+        companyId: currentCompany.id,
+        type: 'boq',
+      });
+      setBoqNumber(currentNumber);
+    } catch (numberError) {
+      // Fallback to client-side generation if RPC fails
+      currentNumber = await generateNextBOQNumber(existingBOQs, currentCompany.id);
+      setBoqNumber(currentNumber);
     }
+
+    const finalTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
+    const finalTotal = filledSubtotal + finalTaxAmount;
+    const payload = {
+      company_id: currentCompany.id,
+      number: currentNumber,
+      boq_date: boqDate,
+      due_date: dueDate,
+      client_name: selectedClient.name,
+      client_email: selectedClient.email || null,
+      client_phone: selectedClient.phone || null,
+      client_address: selectedClient.address || null,
+      client_city: selectedClient.city || null,
+      client_country: selectedClient.country || null,
+      contractor: contractor || null,
+      project_title: projectTitle || null,
+      currency: currency,
+      exchange_rate: exchangeRate,
+      subtotal: filledSubtotal,
+      tax_amount: finalTaxAmount,
+      total_amount: finalTotal,
+      attachment_url: attachmentUrl || null,
+      data: { ...insertedDoc, number: currentNumber },
+      terms_and_conditions: termsAndConditions || null,
+      showCalculatedValuesInTerms: showCalculatedValuesInTerms,
+      created_by: profile?.id || null,
+      status: boqStatus,
+    };
+
+    const { data: insertedBOQ, error: insertError } = await supabase.from('boqs').insert([payload]).select('id');
+    if (insertError) {
+      let errorMsg = 'Unknown error';
+      if (insertError instanceof Error) {
+        errorMsg = insertError.message;
+      } else if (typeof insertError === 'object' && insertError !== null) {
+        errorMsg = (insertError as any).message || (insertError as any).details || JSON.stringify(insertError);
+      }
+      toast.error(`Failed to save BOQ: ${errorMsg}`);
+      return;
+    }
+
+    if (!insertedBOQ || insertedBOQ.length === 0) {
+      toast.error('BOQ saved but no ID returned from database');
+      return;
+    }
+
+    insertedId = insertedBOQ[0].id;
 
     if (!insertedId) {
       toast.error('Failed to save BOQ — please try again');

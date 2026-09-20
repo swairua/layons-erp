@@ -2178,7 +2178,7 @@ export const useStockMovements = (companyId?: string) => {
 // Helper function to generate document numbers
 export const useGenerateDocumentNumber = () => {
   return useMutation({
-    mutationFn: async ({ companyId, type }: { companyId: string; type: 'quotation' | 'invoice' | 'remittance' | 'proforma' }) => {
+    mutationFn: async ({ companyId, type }: { companyId: string; type: 'quotation' | 'invoice' | 'remittance' | 'proforma' | 'boq' }) => {
       const functionName = `generate_${type}_number`;
       const { data, error } = await supabase.rpc(functionName, { company_uuid: companyId });
       
