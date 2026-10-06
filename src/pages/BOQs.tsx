@@ -275,7 +275,7 @@ export default function BOQs() {
 
   const handleDownloadPDF = async (boq: BOQ, options?: { customTitle?: string; amountMultiplier?: number; forceCurrency?: string; customClient?: any; stampImageUrl?: string; specialPaymentPercentage?: number; invoiceNumber?: string; useCurrentDate?: boolean }) => {
     try {
-      if (!boq || !boq.data) {
+      if (!boq || !companyId) {
         toast.error('BOQ data is not available');
         return;
       }
@@ -288,20 +288,28 @@ export default function BOQs() {
         .from('boqs')
         .select('*')
         .eq('id', boq.id)
+        .eq('company_id', companyId)
         .single();
 
-      if (fetchError) {
-        console.error('Failed to fetch latest BOQ data:', fetchError);
-        // Show warning to user that we're using potentially stale data
-        toast.warning('Could not fetch latest BOQ data - using cached version. Terms may not be current.');
+      if (fetchError || !latestBoq) {
+        if (fetchError) console.error('Failed to fetch latest BOQ data:', fetchError);
+        else console.warn('Latest BOQ data not found in database');
         fetchWasSuccessful = false;
-      } else if (!latestBoq) {
-        console.warn('Latest BOQ data not found in database');
-        toast.warning('Could not find BOQ in database - using cached version.');
-        fetchWasSuccessful = false;
+        if (!boq.data) {
+          toast.error('BOQ data is not available');
+          return;
+        }
+        toast.warning(fetchError
+          ? 'Could not fetch latest BOQ data - using cached version. Terms may not be current.'
+          : 'Could not find BOQ in database - using cached version.');
       } else {
         // Use the latest data from database
         boqToUse = latestBoq;
+      }
+
+      if (!boqToUse.data) {
+        toast.error('BOQ data is not available');
+        return;
       }
 
       // Reconstruct the document using top-level columns as single source of truth
