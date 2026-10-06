@@ -9,14 +9,18 @@ import { supabase } from '@/integrations/supabase/client';
  */
 export async function generateUniqueInvoiceNumber(companyId: string): Promise<string> {
   try {
-    // Call the database RPC function to generate the invoice number
-    const { data, error } = await supabase.rpc('generate_invoice_number', {
+    const rpcTimeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('RPC timeout')), 3000);
+    });
+
+    const rpcCall = supabase.rpc('generate_invoice_number', {
       company_uuid: companyId
     });
 
+    const { data, error } = await Promise.race([rpcCall, rpcTimeout]) as any;
+
     if (error) {
       console.error('RPC generate_invoice_number failed:', error);
-      // Fallback to client-side generation
       return generateFallbackInvoiceNumber(companyId);
     }
 

@@ -131,12 +131,12 @@ export const CreateDeliveryNoteModal = ({
         }
       }
     } else if (!formData.invoice_id) {
-      setItems([]);
-      setFormData(prev => ({
-        ...prev,
-        customer_id: '',
-        delivery_address: ''
-      }));
+      setItems(prev => prev.length > 0 ? [] : prev);
+      setFormData(prev =>
+        !prev.customer_id && !prev.delivery_address
+          ? prev
+          : { ...prev, customer_id: '', delivery_address: '' }
+      );
     }
   }, [formData.invoice_id, invoices]);
 

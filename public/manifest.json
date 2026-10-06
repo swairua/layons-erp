@@ -1,0 +1,16 @@
+{
+  "name": "Layons Construction Limited - Professional Business Suite",
+  "short_name": "Layons ERP",
+  "description": "Professional Management System with Quotations, Invoices, Payments, Inventory, and Multi-Company Support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "https://cdn.builder.io/api/v1/image/assets%2Fb67e6ae4f83f4f708ce37b0c48a6007b%2F48f23de3fcba4c9287bda886160b6f8a?format=webp&width=256",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ]
+}

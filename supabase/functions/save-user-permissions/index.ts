@@ -4,6 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Content-Type": "application/json",
 };
 
 const rolePermissions: Record<string, string[]> = {
@@ -76,10 +77,10 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid permission update" }), { status: 400, headers: corsHeaders });
     }
 
-    const defaults = new Set(rolePermissions[targetProfile.role]);
-    const effectiveOverrides = entries
-      .filter(([permissionName, granted]) => granted !== defaults.has(permissionName))
-      .map(([permission_name, granted]) => ({ permission_name, granted }));
+    // The client is the single source of truth for role defaults: it only sends
+    // overrides that differ from the role default. Filtering again here against a
+    // duplicated local map silently discarded valid changes.
+    const effectiveOverrides = entries.map(([permission_name, granted]) => ({ permission_name, granted }));
 
     const { data, error } = await supabaseAdmin.rpc("replace_user_permission_overrides", {
       p_target_user_id: userId,

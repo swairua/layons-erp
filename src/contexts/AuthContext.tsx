@@ -130,6 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const initializingRef = useRef(false);
   const forceCompletedRef = useRef(false);
   const signingOutRef = useRef(false);
+  const signingInRef = useRef(false);
 
   // Toast spam prevention
   const lastNetworkErrorToast = useRef<number>(0);
@@ -173,7 +174,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setPermissions(Object.fromEntries(
           (permissionData || []).map(permission => [permission.permission_name, permission.granted === true])
         ));
-        return profileData;
+        return profileData as unknown as UserProfile;
       } catch (fetchError) {
         lastError = fetchError;
 
@@ -263,6 +264,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return null;
   }, []);
 
+  // Keep retrying the profile fetch until it succeeds so a slow query never
+  // leaves the user stuck on the temporary fallback (role: 'user').
+  const loadProfileInBackground = useCallback((userId: string, maxAttempts = 5) => {
+    let cancelled = false;
+
+    const attemptLoad = (attempt: number) => {
+      if (cancelled || !mountedRef.current) return;
+
+      fetchProfile(userId)
+        .then(profile => {
+          if (cancelled || !mountedRef.current) return;
+          if (profile) {
+            console.log(`[profile] loaded on background attempt ${attempt}`);
+            setProfile(profile);
+            setProfileReady(true);
+          } else if (attempt < maxAttempts) {
+            setTimeout(() => attemptLoad(attempt + 1), 2000);
+          } else {
+            console.warn(`[profile] still no profile after ${maxAttempts} background attempts`);
+          }
+        })
+        .catch(err => {
+          if (cancelled || !mountedRef.current) return;
+          logError('Profile background retry failed:', err, { userId, attempt, context: 'loadProfileInBackground' });
+          if (attempt < maxAttempts) {
+            setTimeout(() => attemptLoad(attempt + 1), 2000);
+          }
+        });
+    };
+
+    attemptLoad(1);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchProfile]);
+
   // Update last login timestamp silently
   const updateLastLogin = useCallback(async (userId: string) => {
     try {
@@ -277,7 +315,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Handle auth state changes with improved error handling
   const handleAuthStateChange = useCallback(async (event: string, newSession: Session | null) => {
-    if (!mountedRef.current || initializingRef.current || signingOutRef.current) return;
+    if (!mountedRef.current || initializingRef.current || signingOutRef.current || signingInRef.current) return;
 
     
     try {
@@ -412,15 +450,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             ])
               .then(profile => {
                 if (mountedRef.current) {
-                  setProfile(profile || {
-                    id: sessionData.session.user.id,
-                    email: (sessionData.session.user.email || '').toLowerCase(),
-                    role: 'user',
-                    status: 'active',
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                  } as UserProfile);
-                  setProfileReady(true);
+                  if (profile) {
+                    setProfile(profile);
+                    setProfileReady(true);
+                  } else {
+                    console.warn('[profile] initial fetch timed out or returned nothing - using fallback and retrying');
+                    setProfile({
+                      id: sessionData.session.user.id,
+                      email: (sessionData.session.user.email || '').toLowerCase(),
+                      role: 'user',
+                      status: 'active',
+                      created_at: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    } as UserProfile);
+                    setProfileReady(true);
+                    loadProfileInBackground(sessionData.session.user.id);
+                  }
                 }
               })
               .catch(() => {
@@ -434,6 +479,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     updated_at: new Date().toISOString()
                   } as UserProfile);
                   setProfileReady(true);
+                  loadProfileInBackground(sessionData.session.user.id);
                 }
               });
           }
@@ -461,36 +507,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       mountedRef.current = false;
       subscription.unsubscribe();
     };
-  }, [fetchProfile, handleAuthStateChange]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const pollInterval = setInterval(() => {
-      if (!mountedRef.current || window.location.pathname === '/settings/permissions') return;
-
-      supabase
-        .from('user_permissions')
-        .select('permission_name, granted')
-        .eq('user_id', user.id)
-        .then(({ data: permissionData, error: permissionError }) => {
-          if (permissionError) {
-            console.warn('[AuthContext] Permission poll error:', permissionError.message);
-            return;
-          }
-          if (mountedRef.current) {
-            setPermissions(Object.fromEntries(
-              (permissionData || []).map(permission => [permission.permission_name, permission.granted === true])
-            ));
-          }
-        })
-        .catch(err => {
-          console.warn('[AuthContext] Permission poll failed:', err instanceof Error ? err.message : String(err));
-        });
-    }, 60000);
-
-    return () => clearInterval(pollInterval);
-  }, [user]);
+  }, [fetchProfile, handleAuthStateChange, loadProfileInBackground]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const hardTimeoutId = setTimeout(() => {
@@ -499,135 +516,114 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     }, 2000);
 
-    const { data, error } = await safeAuthOperation(async () => {
-      setLoading(true);
-      return await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-    }, 'signIn');
+    // Set flag so handleAuthStateChange skips during active sign-in
+    signingInRef.current = true;
 
-    if (error) {
-      clearTimeout(hardTimeoutId);
-      setLoading(false);
-      // Ensure error is a proper Error object with a message property
-      const errorMessage = parseErrorMessage(error);
-      const formattedError = new Error(errorMessage || 'Authentication failed');
-      return { error: formattedError as AuthError, session: null };
-    }
-
-    if (data?.error) {
-      clearTimeout(hardTimeoutId);
-      setLoading(false);
-      // Ensure error is a proper Error object with a message property
-      const errorMessage = parseErrorMessage(data.error);
-      const formattedError = new Error(errorMessage || 'Authentication failed');
-      return { error: formattedError as AuthError, session: null };
-    }
-
-    // Update auth state and wait for profile load before clearing loading
     try {
-      const session = (data as any)?.session ?? (data as any)?.data?.session;
-      const signedInUser = session?.user;
-      if (signedInUser) {
-        setSession(session);
-        setUser(signedInUser);
-        setProfileReady(false);
+      const { data, error } = await safeAuthOperation(async () => {
+        setLoading(true);
+        return await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+      }, 'signIn');
 
-        try {
-          // Fetch profile with timeout before clearing loading state
-          // This ensures components render with correct role/email filtering
-          const profileTimeoutPromise = new Promise<UserProfile | null>((resolve) => {
-            setTimeout(() => {
-              resolve(null);
-            }, 1000); // 1 second timeout for sign in flow
-          });
-
-          const userProfile = await Promise.race([
-            fetchProfile(signedInUser.id),
-            profileTimeoutPromise
-          ]);
-
-          if (mountedRef.current) {
-            if (userProfile) {
-              if (userProfile.email) {
-                userProfile.email = userProfile.email.toLowerCase();
-              }
-              setProfile(userProfile);
-              setProfileReady(true);
-            } else {
-              // Create minimal profile as fallback to allow app to function
-              const fallbackProfile: UserProfile = {
-                id: signedInUser.id,
-                email: (signedInUser.email || '').toLowerCase(),
-                role: 'user',
-                status: 'active',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              };
-              setProfile(fallbackProfile);
-              setProfileReady(true);
-            }
-
-            // Now safe to clear loading state - profile is set
-            setLoading(false);
-
-            // Continue with background retry for profile if needed
-            if (!userProfile) {
-              const retryTimeoutPromise = new Promise<UserProfile | null>((resolve) => {
-                setTimeout(() => {
-                  resolve(null);
-                }, 5000); // 5 second timeout for background retry
-              });
-
-              Promise.race([
-                fetchProfile(signedInUser.id),
-                retryTimeoutPromise
-              ])
-                .then(retryProfile => {
-                  if (mountedRef.current && retryProfile) {
-                    setProfile(retryProfile);
-                  }
-                })
-                .catch(retryError => {
-                  logError('Profile retry failed:', retryError, {
-                    userId: signedInUser.id,
-                    context: 'signIn'
-                  });
-                });
-            }
-          }
-        } catch (profileError) {
-          // Ensure we clear loading even if profile fetch fails
-          setLoading(false);
-          // Create minimal fallback profile
-          const fallbackProfile: UserProfile = {
-            id: signedInUser.id,
-            email: (signedInUser.email || '').toLowerCase(),
-            role: 'user',
-            status: 'active',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          setProfile(fallbackProfile);
-          setProfileReady(true);
-        }
-        clearTimeout(hardTimeoutId);
-        setTimeout(() => toast.success('Signed in successfully'), 0);
-        return { error: null, session };
-      } else {
+      if (error) {
         clearTimeout(hardTimeoutId);
         setLoading(false);
-        const errorMessage = 'Authentication failed: no user data returned';
+        const errorMessage = parseErrorMessage(error);
+        const formattedError = new Error(errorMessage || 'Authentication failed');
+        return { error: formattedError as AuthError, session: null };
+      }
+
+      if (data?.error) {
+        clearTimeout(hardTimeoutId);
+        setLoading(false);
+        const errorMessage = parseErrorMessage(data.error);
+        const formattedError = new Error(errorMessage || 'Authentication failed');
+        return { error: formattedError as AuthError, session: null };
+      }
+
+      // Update auth state and wait for profile load before clearing loading
+      try {
+        const session = (data as any)?.session ?? (data as any)?.data?.session;
+        const signedInUser = session?.user;
+        if (signedInUser) {
+          setSession(session);
+          setUser(signedInUser);
+          setProfileReady(false);
+
+          try {
+            const profileTimeoutPromise = new Promise<UserProfile | null>((resolve) => {
+              setTimeout(() => {
+                resolve(null);
+              }, 1000);
+            });
+
+            const userProfile = await Promise.race([
+              fetchProfile(signedInUser.id),
+              profileTimeoutPromise
+            ]);
+
+            if (mountedRef.current) {
+              if (userProfile) {
+                if (userProfile.email) {
+                  userProfile.email = userProfile.email.toLowerCase();
+                }
+                setProfile(userProfile);
+                setProfileReady(true);
+              } else {
+                const fallbackProfile: UserProfile = {
+                  id: signedInUser.id,
+                  email: (signedInUser.email || '').toLowerCase(),
+                  role: 'user',
+                  status: 'active',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                };
+                setProfile(fallbackProfile);
+                setProfileReady(true);
+              }
+
+              setLoading(false);
+
+              if (!userProfile) {
+                loadProfileInBackground(signedInUser.id);
+              }
+            }
+          } catch (profileError) {
+            setLoading(false);
+            const fallbackProfile: UserProfile = {
+              id: signedInUser.id,
+              email: (signedInUser.email || '').toLowerCase(),
+              role: 'user',
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            setProfile(fallbackProfile);
+            setProfileReady(true);
+            loadProfileInBackground(signedInUser.id);
+          }
+          clearTimeout(hardTimeoutId);
+          setTimeout(() => toast.success('Signed in successfully'), 0);
+          return { error: null, session };
+        } else {
+          clearTimeout(hardTimeoutId);
+          setLoading(false);
+          const errorMessage = 'Authentication failed: no user data returned';
+          return { error: new Error(errorMessage) as AuthError, session: null };
+        }
+      } catch (error) {
+        clearTimeout(hardTimeoutId);
+        setLoading(false);
+        const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during sign in';
         return { error: new Error(errorMessage) as AuthError, session: null };
       }
-    } catch (error) {
-      clearTimeout(hardTimeoutId);
-      setLoading(false);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during sign in';
-      return { error: new Error(errorMessage) as AuthError, session: null };
+    } finally {
+      signingInRef.current = false;
     }
-  }, [fetchProfile]);
+  }, [fetchProfile, loadProfileInBackground]);
 
   const signUp = useCallback(async (email: string, password: string, fullName?: string) => {
     const { data, error } = await safeAuthOperation(async () => {
@@ -905,9 +901,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, [user]);
 
+  // Keep this user's permission map in sync with user_permissions so overrides
+  // granted by an admin appear in the sidebar without a fresh login.
+  useEffect(() => {
+    if (!user) return;
+
+    const pollInterval = setInterval(() => {
+      refreshPermissions();
+    }, 30000);
+
+    const refreshOnVisible = () => {
+      if (document.visibilityState === 'visible') refreshPermissions();
+    };
+    window.addEventListener('focus', refreshOnVisible);
+    document.addEventListener('visibilitychange', refreshOnVisible);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', refreshOnVisible);
+      document.removeEventListener('visibilitychange', refreshOnVisible);
+    };
+  }, [user, refreshPermissions]);
+
   const changeUserPassword = useCallback(async (userId: string, newPassword: string) => {
     try {
+      console.log('[changeUserPassword] starting', { userId });
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('[changeUserPassword] session resolved', { hasSession: !!session });
 
       if (!session) {
         const errorMsg = 'Not authenticated. Please sign in again.';
@@ -915,7 +935,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: new Error(errorMsg) };
       }
 
-      const { data, error } = await supabase.functions.invoke('change-user-password', {
+      const invokeStarted = Date.now();
+      const invokePromise = supabase.functions.invoke('change-user-password', {
         body: {
           userId,
           newPassword,
@@ -925,8 +946,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         },
       });
 
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Password service timed out after 15 seconds')), 15000);
+      });
+
+      const { data, error } = await Promise.race([invokePromise, timeoutPromise]);
+      console.log(`[changeUserPassword] edge function responded in ${Date.now() - invokeStarted}ms`, { error, data });
+
+      // Edge functions that omit Content-Type arrive as a JSON string
+      let result = data;
+      if (typeof result === 'string') {
+        try {
+          result = JSON.parse(result);
+        } catch {
+          result = null;
+        }
+      }
+
       if (error) {
         logError('Error changing user password:', error, { context: 'changeUserPassword', targetUserId: userId, errorDetails: String(error) });
+
+        const rawMessage = error?.message || '';
+        const isServiceUnavailable =
+          error?.name === 'FunctionsFetchError' ||
+          /failed to send a request|failed to fetch|networkerror|load failed/i.test(rawMessage);
+
+        if (isServiceUnavailable) {
+          const unavailableMsg = 'Password service is unavailable. Ask an administrator to deploy the change-user-password function.';
+          setTimeout(() => toast.error(unavailableMsg), 0);
+          return { error: new Error(unavailableMsg) };
+        }
+
         let errorMessage = formatErrorForDisplay(error);
         if (!errorMessage || errorMessage === 'An unexpected error occurred') {
           errorMessage = 'Failed to send request to edge function. Please try again.';
@@ -935,11 +985,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { error: new Error(errorMessage) };
       }
 
-      if (data?.success) {
+      if (result?.success) {
         setTimeout(() => toast.success('Password changed successfully'), 0);
         return { error: null };
       } else {
-        const errorMsg = data?.error || 'Failed to change password';
+        const errorMsg = result?.error || 'Failed to change password';
         setTimeout(() => toast.error(errorMsg), 0);
         return { error: new Error(errorMsg) };
       }

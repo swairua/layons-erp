@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { toast } from '@/utils/safeToast';
 import { handleAuthError } from '@/utils/authErrorHandler';
+import { useNavigate } from 'react-router-dom';
 
 export function EnhancedLogin() {
   const { signIn, loading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -52,6 +54,7 @@ export function EnhancedLogin() {
         setSubmitting(false);
       } else if (session?.user) {
         setSubmitting(false);
+        setTimeout(() => navigate('/'), 0);
       } else {
         toast.error('Sign-in could not be completed. Please try again.');
         setSubmitting(false);

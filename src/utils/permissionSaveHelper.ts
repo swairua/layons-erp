@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
-import { getAllowedFeatures } from '@/utils/rolePermissions';
-import type { UserRole, FeatureKey } from '@/utils/rolePermissions';
+import { getAllowedFeatures, ALL_FEATURE_KEYS } from '@/utils/rolePermissions';
+import type { UserRole } from '@/utils/rolePermissions';
 
 export interface PermissionSaveError {
   code: string;
@@ -15,6 +15,13 @@ export interface PermissionSaveResult {
   rowsInserted?: number;
 }
 
+interface PermissionFunctionResponse {
+  success?: boolean;
+  error?: string;
+  rowsDeleted?: number;
+  rowsInserted?: number;
+}
+
 /**
  * Compute the overrides that actually differ from the role defaults.
  * Entries that match the role default are dropped so only meaningful
@@ -25,8 +32,9 @@ function computeEffectiveOverrides(
   userRole: UserRole
 ): { permission_name: string; granted: boolean }[] {
   const defaults = new Set<string>(getAllowedFeatures(userRole));
+  const validKeys = new Set<string>(ALL_FEATURE_KEYS);
   return Object.entries(overrides)
-    .filter(([permissionName, granted]) => granted !== defaults.has(permissionName as FeatureKey))
+    .filter(([permissionName, granted]) => validKeys.has(permissionName) && granted !== defaults.has(permissionName))
     .map(([permission_name, granted]) => ({ permission_name, granted }));
 }
 
@@ -35,7 +43,7 @@ export async function saveUserPermissions(
   overrides: Record<string, boolean>,
   userRole: UserRole
 ): Promise<PermissionSaveResult> {
-  const edgeResult = await invokeEdgeFunction(userId, overrides);
+  const edgeResult = await invokeEdgeFunction(userId, overrides, userRole);
 
   if (edgeResult.success) return edgeResult;
 
@@ -51,15 +59,50 @@ export async function saveUserPermissions(
 
 async function invokeEdgeFunction(
   userId: string,
-  overrides: Record<string, boolean>
+  overrides: Record<string, boolean>,
+  userRole: UserRole
 ): Promise<PermissionSaveResult> {
-  const { data, error } = await supabase.functions.invoke('save-user-permissions', {
-    body: { userId, overrides },
-  });
+  const effective = computeEffectiveOverrides(overrides, userRole);
+  // The edge function expects a Record<string, boolean>; the DB fallback
+  // (and computeEffectiveOverrides) use the array form.
+  const payload = Object.fromEntries(effective.map(e => [e.permission_name, e.granted]));
+
+  const { data, error } = (await supabase.functions.invoke('save-user-permissions', {
+    body: { userId, overrides: payload },
+  })) as {
+    data: unknown;
+    error: { name?: string; message?: string; context?: Response } | null;
+  };
+
+  // Edge functions that omit Content-Type arrive as a JSON string
+  let result: PermissionFunctionResponse | null = null;
+  if (typeof data === 'string') {
+    try {
+      result = JSON.parse(data) as PermissionFunctionResponse;
+    } catch {
+      result = null;
+    }
+  } else if (data) {
+    result = data as PermissionFunctionResponse;
+  }
 
   if (error) {
     const message = error.message || '';
     const isUnavailable = error.name === 'FunctionsFetchError' || message.toLowerCase().includes('failed to send a request');
+
+    // Surface the function's own error body instead of the generic
+    // "Edge Function returned a non-2xx status code".
+    let serverMessage = message;
+    if (error.context && typeof error.context.text === 'function') {
+      try {
+        const body = await error.context.text();
+        const parsed = body ? (JSON.parse(body) as { error?: string }) : null;
+        if (parsed?.error) serverMessage = parsed.error;
+        else if (body) serverMessage = body;
+      } catch {
+        // keep the generic message
+      }
+    }
 
     return {
       success: false,
@@ -67,14 +110,14 @@ async function invokeEdgeFunction(
         code: isUnavailable ? 'SAVE_SERVICE_UNAVAILABLE' : 'SAVE_FAILED',
         message: isUnavailable
           ? 'Permission service is unavailable. Ask an administrator to deploy the save-user-permissions function.'
-          : message || 'Permission save failed',
-        details: message || undefined,
+          : serverMessage || 'Permission save failed',
       },
     };
   }
 
-  if (!data?.success) {
-    const message = data?.error || 'Permission save failed';
+  if (!result?.success) {
+    const rawError = result?.error;
+    const message = typeof rawError === 'string' && rawError ? rawError : 'Permission save failed';
     const isAuthorizationError = /only admins|other companies|unauthorized/i.test(message);
 
     return {
@@ -89,8 +132,8 @@ async function invokeEdgeFunction(
 
   return {
     success: true,
-    rowsDeleted: data.rowsDeleted,
-    rowsInserted: data.rowsInserted,
+    rowsDeleted: result.rowsDeleted,
+    rowsInserted: result.rowsInserted,
   };
 }
 

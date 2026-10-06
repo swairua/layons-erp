@@ -59,3 +59,8 @@ export function getAllowedFeatures(role: UserRole | null | undefined): FeatureKe
   if (!role) return [];
   return ROLE_PERMISSIONS[role] || [];
 }
+
+// Every permission key the UI can display, across all roles.
+export const ALL_FEATURE_KEYS: FeatureKey[] = [
+  ...new Set(Object.values(ROLE_PERMISSIONS).flat()),
+];

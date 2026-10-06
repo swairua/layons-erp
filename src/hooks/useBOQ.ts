@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { BoqDocument, BoqSection } from '@/utils/boqPdfGenerator';
 import { ensureQuantityColumnsAreDecimal } from '@/utils/ensureDatabaseColumns';
+import { generateUniqueInvoiceNumber } from '@/utils/invoiceNumberGenerator';
 
 const safeN = (v: number | undefined) => (typeof v === 'number' && !isNaN(v) ? v : 0);
 
@@ -224,20 +225,7 @@ export const useConvertBoqToInvoice = () => {
       // Generate invoice number
       let invoiceNumber: string;
       try {
-        const { data: genNumber, error: invoiceNumberError } = await supabase.rpc('generate_invoice_number', {
-          company_uuid: boq.company_id
-        });
-
-        if (invoiceNumberError) {
-          const errorMsg = invoiceNumberError?.message || invoiceNumberError?.details || JSON.stringify(invoiceNumberError);
-          throw new Error(`Failed to generate invoice number: ${errorMsg}`);
-        }
-
-        if (!genNumber || typeof genNumber !== 'string') {
-          throw new Error('Failed to generate invoice number: received invalid response');
-        }
-
-        invoiceNumber = genNumber;
+        invoiceNumber = await generateUniqueInvoiceNumber(boq.company_id);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         console.error('Invoice number generation error:', { errorMsg, company_id: boq.company_id });

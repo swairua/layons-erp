@@ -196,13 +196,16 @@ const StatementOfAccounts = () => {
     }
   };
 
-  const filteredStatements = computedStatements.filter(statement => {
-    const matchesSearch = statement.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredStatements = computedStatements
+    .filter(statement => {
+      const matchesSearch = statement.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          statement.customerCode.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCustomer = selectedCustomer === 'all' || statement.customerId.toString() === selectedCustomer;
-    const matchesOverdue = !showOverdueOnly || statement.overdueAmount > 0;
-    return matchesSearch && matchesCustomer && matchesOverdue;
-  });
+      const matchesCustomer = selectedCustomer === 'all' || statement.customerId.toString() === selectedCustomer;
+      const matchesOverdue = !showOverdueOnly || statement.overdueAmount > 0;
+      return matchesSearch && matchesCustomer && matchesOverdue;
+    })
+    // Arrange statements with highest outstanding balance first
+    .sort((a, b) => b.currentBalance - a.currentBalance);
 
   const getAccountStatus = (currentBalance: number, overdueAmount: number, creditLimit: number) => {
     if (overdueAmount > 0) {

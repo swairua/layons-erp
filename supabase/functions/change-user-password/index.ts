@@ -6,6 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+  "Content-Type": "application/json",
 };
 
 serve(async (req) => {
@@ -84,10 +85,12 @@ serve(async (req) => {
       );
     }
 
-    // Update user password using admin API
+    // Update user password using admin API. email_confirm: true marks the
+    // email as verified in the same call so the user can sign in immediately
+    // with the new password (no confirmation email/link required).
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
-      { password: newPassword }
+      { password: newPassword, email_confirm: true }
     );
 
     if (updateError) {

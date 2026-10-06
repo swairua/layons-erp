@@ -145,7 +145,8 @@ export function Sidebar({ isMobile = false, isOpen = true, onClose = () => {} }:
   useEffect(() => {
     console.log('🔍 Sidebar - role:', role);
     console.log('📋 Sidebar filtered items:', filteredSidebarItems.map(item => item.title));
-  }, [role, filteredSidebarItems]);
+    console.log('[Sidebar] permissions map:', permissions); // TEMPORARY DIAGNOSTIC
+  }, [role, filteredSidebarItems, permissions]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems(prev =>

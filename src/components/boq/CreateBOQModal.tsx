@@ -592,7 +592,6 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
           name: sub.name,
           label: sub.label,
           items: sub.items.map(i => {
-            // lookup unit name from units list
             const unitObj = units.find((u: any) => u.id === i.unit);
             return {
               description: i.description,
@@ -605,35 +604,24 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
         }))
       })),
       notes: notes || undefined,
-      // NOTE: Do NOT save terms to nested data - save only to top-level columns
-      // This ensures single source of truth for terms_and_conditions and show_calculated_values_in_terms
     };
 
-    // Validate required fields before inserting
     if (!currentCompany?.id) {
       console.error('Company ID is missing');
       toast.error('Company information is missing');
       return;
     }
 
+    let insertedId: string | null = null;
     let insertedDoc: BoqDocument = doc;
 
-    let currentNumber: string;
-    try {
-      currentNumber = await generateDocNumber.mutateAsync({
-        companyId: currentCompany.id,
-        type: 'boq',
-      });
-    } catch {
-      invalidateBOQNumberCache(currentCompany.id);
-      currentNumber = await generateNextBOQNumber(undefined, currentCompany.id);
-    }
-    insertedDoc = { ...doc, number: currentNumber };
+    // Use client-side number generation (the generate_boq_number RPC does not exist)
+    let currentNumber: string = await generateNextBOQNumber(existingBOQs, currentCompany.id);
     setBoqNumber(currentNumber);
 
     const finalTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
     const finalTotal = filledSubtotal + finalTaxAmount;
-    const payload = {
+    const payload: Record<string, any> = {
       company_id: currentCompany.id,
       number: currentNumber,
       boq_date: boqDate,
@@ -659,18 +647,32 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       status: boqStatus,
     };
 
-    let { data: insertedBOQ, error: insertError } = await supabase.from('boqs').insert([payload]).select('id');
-    if (insertError?.code === '23505' && insertError.message.includes('boqs_company_id_number_key')) {
-      invalidateBOQNumberCache(currentCompany.id);
-      currentNumber = await generateNextBOQNumber(undefined, currentCompany.id);
-      insertedDoc = { ...doc, number: currentNumber };
-      payload.number = currentNumber;
-      payload.data = insertedDoc;
-      setBoqNumber(currentNumber);
-      const retryResult = await supabase.from('boqs').insert([payload]).select('id');
-      insertedBOQ = retryResult.data;
-      insertError = retryResult.error;
+    let insertedBOQ: any = null;
+    let insertError: any = null;
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const result = await supabase.from('boqs').insert([payload]).select('id');
+      insertError = result.error;
+      insertedBOQ = result.data;
+
+      if (!insertError) break;
+
+      const isDuplicateKey =
+        insertError?.message?.includes('duplicate key') ||
+        insertError?.code === '23505';
+
+      if (!isDuplicateKey) break;
+
+      if (attempt < MAX_RETRIES - 1) {
+        invalidateBOQNumberCache(currentCompany.id);
+        currentNumber = await generateNextBOQNumber(undefined, currentCompany.id);
+        setBoqNumber(currentNumber);
+        payload.number = currentNumber;
+        payload.data = { ...insertedDoc, number: currentNumber };
+      }
     }
+
     if (insertError) {
       let errorMsg = 'Unknown error';
       if (insertError instanceof Error) {
@@ -682,8 +684,15 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       return;
     }
 
-    if (!insertedBOQ?.[0]?.id) {
+    if (!insertedBOQ || insertedBOQ.length === 0) {
       toast.error('BOQ saved but no ID returned from database');
+      return;
+    }
+
+    insertedId = insertedBOQ[0].id;
+
+    if (!insertedId) {
+      toast.error('Failed to save BOQ — please try again');
       return;
     }
 
@@ -713,9 +722,10 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       pendingTimeoutRef.current = null;
     }
     formStateRef.current = {};
-    await deleteDraft(profile.id, currentCompany.id, draftTokenRef.current);
-    draftIdRef.current = null;
     handleOpenChange(false);
+
+    void deleteDraft(profile.id, currentCompany.id, draftTokenRef.current).catch(() => {});
+    draftIdRef.current = null;
 
     void downloadBOQPDF(docForPdf, companyForPdf).catch((err) => {
       console.error('Failed to generate BOQ PDF', err);

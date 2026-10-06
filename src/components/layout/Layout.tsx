@@ -35,7 +35,7 @@ export function Layout({ children }: LayoutProps) {
   }, [loading, isAuthenticated]);
 
   // Routes that don't require authentication
-  const publicRoutes = ['/auth-test', '/manual-setup', '/database-fix-page', '/auto-fix', '/audit', '/auto-payment-sync', '/payment-sync', '/admin-recreate'];
+  const publicRoutes = ['/auth-test', '/manual-setup', '/database-fix-page', '/auto-fix', '/auto-payment-sync', '/payment-sync', '/admin-recreate'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
 
   // Prefetch data for child pages once company is known

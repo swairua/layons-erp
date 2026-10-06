@@ -290,15 +290,33 @@ class LCLBOQService {
         if (error) throw error;
         result = data as BOQData;
       } else {
-        // Insert new BOQ
-        const { data, error } = await supabase
-          .from('boqs')
-          .insert([boqRecord])
-          .select()
-          .single();
+        const MAX_RETRIES = 3;
+        let boqDataResult: any = null;
+        let boqDataError: any = null;
 
-        if (error) throw error;
-        result = data as BOQData;
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          const { data, error } = await supabase
+            .from('boqs')
+            .insert([boqRecord])
+            .select()
+            .single();
+          boqDataResult = data;
+          boqDataError = error;
+
+          if (!boqDataError) break;
+
+          const isDuplicateKey =
+            boqDataError?.message?.includes('duplicate key') ||
+            boqDataError?.code === '23505';
+
+          if (!isDuplicateKey || attempt >= MAX_RETRIES - 1) break;
+
+          const { generateNextBOQNumber } = await import('@/utils/boqNumberGenerator');
+          boqRecord.number = await generateNextBOQNumber(undefined, lclBoq.company_id);
+        }
+
+        if (boqDataError) throw boqDataError;
+        result = boqDataResult as BOQData;
       }
     }
 

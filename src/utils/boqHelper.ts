@@ -58,21 +58,34 @@ export function createPercentageCopy(originalBOQ: BOQData, percentage: number, n
 }
 
 export async function saveBOQCopy(boqCopy: Omit<BOQData, 'id'>, createdBy?: string): Promise<BOQData | null> {
-  const { data, error } = await supabase
-    .from('boqs')
-    .insert([
-      {
-        ...boqCopy,
-        created_by: createdBy,
-      },
-    ])
-    .select()
-    .single();
+  const { generateNextBOQNumber } = await import('@/utils/boqNumberGenerator');
+  const MAX_RETRIES = 3;
 
-  if (error) {
-    console.error('Failed to save BOQ copy:', error);
-    return null;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const { data, error } = await supabase
+      .from('boqs')
+      .insert([
+        {
+          ...boqCopy,
+          created_by: createdBy,
+        },
+      ])
+      .select()
+      .single();
+
+    if (!error) return data;
+
+    const isDuplicateKey =
+      error?.message?.includes('duplicate key') ||
+      error?.code === '23505';
+
+    if (!isDuplicateKey || attempt >= MAX_RETRIES - 1) {
+      console.error('Failed to save BOQ copy:', error);
+      return null;
+    }
+
+    boqCopy.number = await generateNextBOQNumber(undefined, boqCopy.company_id);
   }
 
-  return data;
+  return null;
 }

@@ -381,11 +381,32 @@ export async function publishDraft(
       created_by: createdByUserId || null,
     };
 
-    const { data: insertedBoq, error: insertError } = await supabase
-      .from('boqs')
-      .insert([boqPayload])
-      .select('id')
-      .single();
+    let insertedBoq: any = null;
+    let insertError: any = null;
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      const result = await supabase
+        .from('boqs')
+        .insert([boqPayload])
+        .select('id')
+        .single();
+      insertedBoq = result.data;
+      insertError = result.error;
+
+      if (!insertError) break;
+
+      const isDuplicateKey =
+        insertError?.message?.includes('duplicate key') ||
+        insertError?.code === '23505';
+
+      if (!isDuplicateKey) break;
+
+      if (attempt < MAX_RETRIES - 1) {
+        const { generateNextBOQNumber } = await import('@/utils/boqNumberGenerator');
+        boqPayload.number = await generateNextBOQNumber(undefined, companyId);
+      }
+    }
 
     if (insertError) {
       const errorMsg = insertError instanceof Error ? insertError.message : (insertError?.message || JSON.stringify(insertError));
