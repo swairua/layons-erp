@@ -84,6 +84,7 @@ export default function BOQs() {
   const [convertDialog, setConvertDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string; isLCL?: boolean }>({ open: false });
   const [createDrafts, setCreateDrafts] = useState<BOQDraftRecord[]>([]);
   const [continueDraftToken, setContinueDraftToken] = useState<string | null>(null);
+  const [createModalInstance, setCreateModalInstance] = useState(0);
 
   // Helper function to refresh linked BOQ IDs (with timeout to prevent blocking)
   const refreshLinkedBOQIds = async () => {
@@ -275,7 +276,7 @@ export default function BOQs() {
 
   const handleDownloadPDF = async (boq: BOQ, options?: { customTitle?: string; amountMultiplier?: number; forceCurrency?: string; customClient?: any; stampImageUrl?: string; specialPaymentPercentage?: number; invoiceNumber?: string; useCurrentDate?: boolean }) => {
     try {
-      if (!boq || !boq.data) {
+      if (!boq || !companyId) {
         toast.error('BOQ data is not available');
         return;
       }
@@ -288,20 +289,28 @@ export default function BOQs() {
         .from('boqs')
         .select('*')
         .eq('id', boq.id)
+        .eq('company_id', companyId)
         .single();
 
-      if (fetchError) {
-        console.error('Failed to fetch latest BOQ data:', fetchError);
-        // Show warning to user that we're using potentially stale data
-        toast.warning('Could not fetch latest BOQ data - using cached version. Terms may not be current.');
+      if (fetchError || !latestBoq) {
+        if (fetchError) console.error('Failed to fetch latest BOQ data:', fetchError);
+        else console.warn('Latest BOQ data not found in database');
         fetchWasSuccessful = false;
-      } else if (!latestBoq) {
-        console.warn('Latest BOQ data not found in database');
-        toast.warning('Could not find BOQ in database - using cached version.');
-        fetchWasSuccessful = false;
+        if (!boq.data) {
+          toast.error('BOQ data is not available');
+          return;
+        }
+        toast.warning(fetchError
+          ? 'Could not fetch latest BOQ data - using cached version. Terms may not be current.'
+          : 'Could not find BOQ in database - using cached version.');
       } else {
         // Use the latest data from database
         boqToUse = latestBoq;
+      }
+
+      if (!boqToUse.data) {
+        toast.error('BOQ data is not available');
+        return;
       }
 
       // Reconstruct the document using top-level columns as single source of truth
@@ -594,7 +603,11 @@ export default function BOQs() {
           <Button
             className="gradient-primary text-primary-foreground hover:opacity-90 shadow-card w-full sm:w-auto"
             size="sm"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setContinueDraftToken(null);
+              setCreateModalInstance(instance => instance + 1);
+              setOpen(true);
+            }}
           >
             <Plus className="h-4 w-4 mr-2" />
             New BOQ
@@ -630,7 +643,11 @@ export default function BOQs() {
                   <div className="flex gap-2 flex-shrink-0 ml-3">
                     <Button
                       size="sm"
-                      onClick={() => { setContinueDraftToken(draft.draft_token); setOpen(true); }}
+                      onClick={() => {
+                        setContinueDraftToken(draft.draft_token);
+                        setCreateModalInstance(instance => instance + 1);
+                        setOpen(true);
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
                     >
                       Continue
@@ -1007,7 +1024,7 @@ export default function BOQs() {
         </CardContent>
       </Card>
 
-      <CreateBOQModal open={open} initialDraftToken={continueDraftToken} onOpenChange={(newOpen) => {
+      <CreateBOQModal key={createModalInstance} open={open} initialDraftToken={continueDraftToken} onOpenChange={(newOpen) => {
         setOpen(newOpen);
         if (!newOpen) {
           setContinueDraftToken(null);

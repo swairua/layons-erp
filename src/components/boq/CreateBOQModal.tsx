@@ -193,77 +193,61 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
     }
   }, [open, currentCompany?.id, currentCompany?.default_terms_and_conditions, previousTermsLoaded]);
 
-  // Load draft from database when modal opens (after previous terms are loaded)
+  // Load an explicitly selected draft after company and authentication state are ready.
   useEffect(() => {
-    if (open && previousTermsLoaded && currentCompany?.id && profile?.id) {
-      const needsLoad = !draftLoaded || (initialDraftToken && initialDraftToken !== loadedDraftTokenRef.current);
-      if (!needsLoad) return;
-      const loadDraft = async () => {
-        try {
-          if (initialDraftToken) {
-            draftTokenRef.current = initialDraftToken;
-          }
-          const token = draftTokenRef.current;
-          let draft = await loadBoqDraft(profile.id, currentCompany.id, token);
-          // Fallback: no draft matched current token, try most recent
-          if (!draft) {
-            draft = await loadBoqDraft(profile.id, currentCompany.id);
-            if (draft) {
-              if (draft.draft_token) {
-                draftTokenRef.current = draft.draft_token;
-              } else {
-                // Legacy draft without token: assign current token so future saves update it
-                await supabase.from('boq_drafts').update({ draft_token: draftTokenRef.current }).eq('id', draft.id);
-              }
-            }
-          }
-          if (draft && draft.data) {
-            draftIdRef.current = draft.id;
-            // Check if draft is stale (>30 minutes old)
-            if (isDraftStale(draft.last_autosaved_at, 30 * 60 * 1000)) {
-              console.log('[CreateBOQModal] Draft is stale, deleting and starting fresh');
-              const staleToken = draft.draft_token || token;
-              draftIdRef.current = null;
-              const deleteResult = await deleteDraft(profile.id, currentCompany.id, staleToken);
-              if (!deleteResult.success) {
-                console.error('[CreateBOQModal] Failed to delete stale draft:', deleteResult.error);
-              }
-              // Start with fresh form (no restoration)
-            } else {
-              // Draft is fresh, restore it
-              setBoqNumber(draft.number || defaultNumber);
-              setBoqDate(draft.boq_date || boqDate);
-              setDueDate(draft.due_date || dueDate);
-              setClientId(draft.customer_id || '');
-              setProjectTitle(draft.project_title || '');
-              setContractor(draft.contractor || '');
-              setNotes(draft.data?.notes || '');
-              setTermsAndConditions(draft.terms_and_conditions || termsAndConditions);
-              setShowCalculatedValuesInTerms(draft.showCalculatedValuesInTerms || false);
-              setCurrency(draft.currency || currency);
-              setTaxAmount(draft.tax_amount || '');
-              setAttachmentUrl(draft.attachment_url || '');
-              setBoqStatus(draft.status || 'draft');
-              setSections(draft.data?.sections || sections);
-              setLastAutosavedAt(draft.last_autosaved_at || null);
-            }
-          }
-        } catch (err) {
-          console.log('Failed to load draft:', err);
-          setHydrationError('Failed to load draft');
-        } finally {
-          setDraftLoaded(true);
-          loadedDraftTokenRef.current = draftTokenRef.current;
-          setIsHydrating(false);
-        }
-      };
-
-      loadDraft();
-    } else if (open && previousTermsLoaded && !draftLoaded) {
+    if (!open || !previousTermsLoaded || !currentCompany?.id || authLoading) return;
+    if (!profile?.id || !initialDraftToken) {
       setDraftLoaded(true);
       setIsHydrating(false);
+      return;
     }
-  }, [open, previousTermsLoaded, draftLoaded, currentCompany?.id, profile?.id, initialDraftToken]);
+
+    const needsLoad = !draftLoaded || initialDraftToken !== loadedDraftTokenRef.current;
+    if (!needsLoad) return;
+
+    const loadDraft = async () => {
+      try {
+        draftTokenRef.current = initialDraftToken;
+        const draft = await loadBoqDraft(profile.id, currentCompany.id, initialDraftToken);
+        if (draft?.data) {
+          draftIdRef.current = draft.id;
+          if (isDraftStale(draft.last_autosaved_at, 30 * 60 * 1000)) {
+            console.log('[CreateBOQModal] Draft is stale, deleting and starting fresh');
+            draftIdRef.current = null;
+            const deleteResult = await deleteDraft(profile.id, currentCompany.id, initialDraftToken);
+            if (!deleteResult.success) {
+              console.error('[CreateBOQModal] Failed to delete stale draft:', deleteResult.error);
+            }
+          } else {
+            setBoqNumber(draft.number || defaultNumber);
+            setBoqDate(draft.boq_date || boqDate);
+            setDueDate(draft.due_date || dueDate);
+            setClientId(draft.customer_id || '');
+            setProjectTitle(draft.project_title || '');
+            setContractor(draft.contractor || '');
+            setNotes(draft.data?.notes || '');
+            setTermsAndConditions(draft.terms_and_conditions || termsAndConditions);
+            setShowCalculatedValuesInTerms(draft.showCalculatedValuesInTerms || false);
+            setCurrency(draft.currency || currency);
+            setTaxAmount(draft.tax_amount || '');
+            setAttachmentUrl(draft.attachment_url || '');
+            setBoqStatus(draft.status || 'draft');
+            setSections(draft.data?.sections || sections);
+            setLastAutosavedAt(draft.last_autosaved_at || null);
+          }
+        }
+      } catch (err) {
+        console.log('Failed to load draft:', err);
+        setHydrationError('Failed to load draft');
+      } finally {
+        setDraftLoaded(true);
+        loadedDraftTokenRef.current = initialDraftToken;
+        setIsHydrating(false);
+      }
+    };
+
+    loadDraft();
+  }, [open, previousTermsLoaded, draftLoaded, currentCompany?.id, profile?.id, authLoading, initialDraftToken]);
 
   // Cleanup pending autosaves on unmount
   useEffect(() => {
@@ -562,6 +546,18 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
     }
 
     setSubmitting(true);
+    try {
+      await generateAndSaveBOQ();
+    } catch (err) {
+      console.error('Failed to save BOQ', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      toast.error(`Failed to save BOQ: ${errorMessage}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const generateAndSaveBOQ = async () => {
     const filledSections = getFilledItems();
 
     // Calculate subtotal from filled items only
@@ -620,22 +616,20 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       return;
     }
 
-    let insertedId: string | null = null;
     let insertedDoc: BoqDocument = doc;
 
-    // Generate number server-side to prevent race conditions
     let currentNumber: string;
     try {
       currentNumber = await generateDocNumber.mutateAsync({
         companyId: currentCompany.id,
         type: 'boq',
       });
-      setBoqNumber(currentNumber);
-    } catch (numberError) {
-      // Fallback to client-side generation if RPC fails
-      currentNumber = await generateNextBOQNumber(existingBOQs, currentCompany.id);
-      setBoqNumber(currentNumber);
+    } catch {
+      invalidateBOQNumberCache(currentCompany.id);
+      currentNumber = await generateNextBOQNumber(undefined, currentCompany.id);
     }
+    insertedDoc = { ...doc, number: currentNumber };
+    setBoqNumber(currentNumber);
 
     const finalTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
     const finalTotal = filledSubtotal + finalTaxAmount;
@@ -665,7 +659,18 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       status: boqStatus,
     };
 
-    const { data: insertedBOQ, error: insertError } = await supabase.from('boqs').insert([payload]).select('id');
+    let { data: insertedBOQ, error: insertError } = await supabase.from('boqs').insert([payload]).select('id');
+    if (insertError?.code === '23505' && insertError.message.includes('boqs_company_id_number_key')) {
+      invalidateBOQNumberCache(currentCompany.id);
+      currentNumber = await generateNextBOQNumber(undefined, currentCompany.id);
+      insertedDoc = { ...doc, number: currentNumber };
+      payload.number = currentNumber;
+      payload.data = insertedDoc;
+      setBoqNumber(currentNumber);
+      const retryResult = await supabase.from('boqs').insert([payload]).select('id');
+      insertedBOQ = retryResult.data;
+      insertError = retryResult.error;
+    }
     if (insertError) {
       let errorMsg = 'Unknown error';
       if (insertError instanceof Error) {
@@ -677,15 +682,8 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       return;
     }
 
-    if (!insertedBOQ || insertedBOQ.length === 0) {
+    if (!insertedBOQ?.[0]?.id) {
       toast.error('BOQ saved but no ID returned from database');
-      return;
-    }
-
-    insertedId = insertedBOQ[0].id;
-
-    if (!insertedId) {
-      toast.error('Failed to save BOQ — please try again');
       return;
     }
 
@@ -715,7 +713,6 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       pendingTimeoutRef.current = null;
     }
     formStateRef.current = {};
-    setSubmitting(false);
     await deleteDraft(profile.id, currentCompany.id, draftTokenRef.current);
     draftIdRef.current = null;
     handleOpenChange(false);
