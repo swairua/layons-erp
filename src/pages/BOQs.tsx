@@ -84,6 +84,7 @@ export default function BOQs() {
   const [convertDialog, setConvertDialog] = useState<{ open: boolean; boqId?: string; boqNumber?: string; isLCL?: boolean }>({ open: false });
   const [createDrafts, setCreateDrafts] = useState<BOQDraftRecord[]>([]);
   const [continueDraftToken, setContinueDraftToken] = useState<string | null>(null);
+  const [createModalInstance, setCreateModalInstance] = useState(0);
 
   // Helper function to refresh linked BOQ IDs (with timeout to prevent blocking)
   const refreshLinkedBOQIds = async () => {
@@ -602,7 +603,11 @@ export default function BOQs() {
           <Button
             className="gradient-primary text-primary-foreground hover:opacity-90 shadow-card w-full sm:w-auto"
             size="sm"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setContinueDraftToken(null);
+              setCreateModalInstance(instance => instance + 1);
+              setOpen(true);
+            }}
           >
             <Plus className="h-4 w-4 mr-2" />
             New BOQ
@@ -638,7 +643,11 @@ export default function BOQs() {
                   <div className="flex gap-2 flex-shrink-0 ml-3">
                     <Button
                       size="sm"
-                      onClick={() => { setContinueDraftToken(draft.draft_token); setOpen(true); }}
+                      onClick={() => {
+                        setContinueDraftToken(draft.draft_token);
+                        setCreateModalInstance(instance => instance + 1);
+                        setOpen(true);
+                      }}
                       className="bg-blue-600 hover:bg-blue-700 text-white h-8 text-xs"
                     >
                       Continue
@@ -1015,7 +1024,7 @@ export default function BOQs() {
         </CardContent>
       </Card>
 
-      <CreateBOQModal open={open} initialDraftToken={continueDraftToken} onOpenChange={(newOpen) => {
+      <CreateBOQModal key={createModalInstance} open={open} initialDraftToken={continueDraftToken} onOpenChange={(newOpen) => {
         setOpen(newOpen);
         if (!newOpen) {
           setContinueDraftToken(null);
