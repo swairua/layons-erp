@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
@@ -88,25 +88,18 @@ const sidebarItems: SidebarItem[] = [
     title: 'Reports',
     icon: BarChart3,
     children: [
-      { title: 'Dashboard', icon: BarChart3, href: '/reports/dashboard' }
-    ]
-  },
-  {
-    title: 'Audit Logs',
-    icon: History,
-    href: '/audit-logs',
-    featureKey: 'audit-logs',
-  },
-  {
-    title: 'Reports',
-    icon: BarChart3,
-    children: [
       { title: 'Overview', icon: BarChart3, href: '/reports', featureKey: 'reports-overview' },
       { title: 'Sales Reports', icon: BarChart3, href: '/reports/sales', featureKey: 'reports-sales' },
       { title: 'Inventory Reports', icon: Package, href: '/reports/inventory', featureKey: 'reports-inventory' },
       { title: 'Statement of Accounts', icon: FileText, href: '/reports/statements', featureKey: 'reports-statements' },
       { title: 'Customer Statements', icon: FileText, href: '/reports/customer-statements', featureKey: 'reports-statements' },
     ],
+  },
+  {
+    title: 'Audit Logs',
+    icon: History,
+    href: '/audit-logs',
+    featureKey: 'audit-logs',
   },
   {
     title: 'Settings',
@@ -128,10 +121,14 @@ interface SidebarProps {
 export function Sidebar({ isMobile = false, isOpen = true, onClose = () => {} }: SidebarProps) {
   const location = useLocation();
   const { currentCompany } = useCurrentCompany();
-  const { profile, permissions } = useAuth();
+  const { profile, permissions, profileReady, permissionsReady } = useAuth();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const role = (profile?.role || 'user') as UserRole;
+  // Never paint the menu from a partially loaded auth state: until the real
+  // profile and permission map are in, role defaults would hide every
+  // privilege granted on top of the role.
+  const authReady = profileReady && permissionsReady;
 
   const filteredSidebarItems = useMemo(() => {
     return sidebarItems.filter(item => {
@@ -141,12 +138,6 @@ export function Sidebar({ isMobile = false, isOpen = true, onClose = () => {} }:
       return item.featureKey ? hasFeature(role, item.featureKey, permissions) : true;
     });
   }, [role, permissions]);
-
-  useEffect(() => {
-    console.log('🔍 Sidebar - role:', role);
-    console.log('📋 Sidebar filtered items:', filteredSidebarItems.map(item => item.title));
-    console.log('[Sidebar] permissions map:', permissions); // TEMPORARY DIAGNOSTIC
-  }, [role, filteredSidebarItems, permissions]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems(prev =>
@@ -242,11 +233,19 @@ export function Sidebar({ isMobile = false, isOpen = true, onClose = () => {} }:
 
   const sidebarContent = (
     <nav className="flex-1 space-y-2 p-4 custom-scrollbar overflow-y-auto">
-      {filteredSidebarItems.map(item => {
-        const rendered = renderSidebarItem(item);
-        if (!rendered) return null;
-        return <div key={item.title}>{rendered}</div>;
-      })}
+      {!authReady ? (
+        <>
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div key={index} className="h-9 rounded-lg bg-sidebar-accent animate-pulse" />
+          ))}
+        </>
+      ) : (
+        filteredSidebarItems.map(item => {
+          const rendered = renderSidebarItem(item);
+          if (!rendered) return null;
+          return <div key={item.title}>{rendered}</div>;
+        })
+      )}
     </nav>
   );
 

@@ -73,6 +73,7 @@ export interface AuthContextType {
   clearTokens: () => void;
   permissions: Record<string, boolean>;
   profileReady: boolean;
+  permissionsReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,6 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean>>({});
   const [profileReady, setProfileReady] = useState(false);
+  const [permissionsReady, setPermissionsReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
@@ -145,15 +147,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('id, email, full_name, avatar_url, phone, company_id, department, position, role, status, last_login, created_at, updated_at')
-          .eq('id', userId)
-          .maybeSingle(); // Use maybeSingle to handle 0 results gracefully
+        // Profile and permissions must land together: a role-gated UI that
+        // renders from the profile while permissions are still empty shows the
+        // wrong menu (role defaults only) on login and page refresh.
+        const [
+          { data: profileData, error: profileError },
+          { data: permissionData, error: permissionError },
+        ] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, email, full_name, avatar_url, phone, company_id, department, position, role, status, last_login, created_at, updated_at')
+            .eq('id', userId)
+            .maybeSingle(), // Use maybeSingle to handle 0 results gracefully
+          supabase
+            .from('user_permissions')
+            .select('permission_name, granted')
+            .eq('user_id', userId),
+        ]);
 
-        if (error) {
-          throw error;
+        if (profileError) {
+          throw profileError;
         }
+
+        if (permissionError) throw permissionError;
+
+        setPermissions(Object.fromEntries(
+          (permissionData || []).map(permission => [permission.permission_name, permission.granted === true])
+        ));
+        setPermissionsReady(true);
 
         if (!profileData) {
           console.warn(`No profile data found for user ${userId} - this is expected if profile hasn't been created yet`);
@@ -164,16 +185,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           profileData.email = profileData.email.toLowerCase();
         }
 
-        const { data: permissionData, error: permissionError } = await supabase
-          .from('user_permissions')
-          .select('permission_name, granted')
-          .eq('user_id', userId);
-
-        if (permissionError) throw permissionError;
-
-        setPermissions(Object.fromEntries(
-          (permissionData || []).map(permission => [permission.permission_name, permission.granted === true])
-        ));
         return profileData as unknown as UserProfile;
       } catch (fetchError) {
         lastError = fetchError;
@@ -266,7 +277,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Keep retrying the profile fetch until it succeeds so a slow query never
   // leaves the user stuck on the temporary fallback (role: 'user').
-  const loadProfileInBackground = useCallback((userId: string, maxAttempts = 5) => {
+  const loadProfileInBackground = useCallback((userId: string, email?: string | null, maxAttempts = 5) => {
     let cancelled = false;
 
     const attemptLoad = (attempt: number) => {
@@ -282,7 +293,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           } else if (attempt < maxAttempts) {
             setTimeout(() => attemptLoad(attempt + 1), 2000);
           } else {
-            console.warn(`[profile] still no profile after ${maxAttempts} background attempts`);
+            console.warn(`[profile] still no profile after ${maxAttempts} background attempts - using temporary profile`);
+            setProfile(prev => prev ?? ({
+              id: userId,
+              email: (email || '').toLowerCase(),
+              role: 'user',
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            } as UserProfile));
+            setProfileReady(true);
           }
         })
         .catch(err => {
@@ -290,6 +310,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           logError('Profile background retry failed:', err, { userId, attempt, context: 'loadProfileInBackground' });
           if (attempt < maxAttempts) {
             setTimeout(() => attemptLoad(attempt + 1), 2000);
+          } else {
+            console.warn(`[profile] background retries exhausted - using temporary profile`);
+            setProfile(prev => prev ?? ({
+              id: userId,
+              email: (email || '').toLowerCase(),
+              role: 'user',
+              status: 'active',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            } as UserProfile));
+            setProfileReady(true);
           }
         });
     };
@@ -354,6 +385,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
           setProfile(null);
           setPermissions({});
+          setPermissionsReady(false);
           setProfileReady(true);
         }
       } else {
@@ -362,6 +394,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setUser(null);
           setProfile(null);
           setPermissions({});
+          setPermissionsReady(false);
           setProfileReady(true);
         }
       }
@@ -454,7 +487,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     setProfile(profile);
                     setProfileReady(true);
                   } else {
-                    console.warn('[profile] initial fetch timed out or returned nothing - using fallback and retrying');
+                    // Keep profileReady false so role/permission-gated UI (sidebar,
+                    // protected routes) waits for the real profile instead of
+                    // rendering from a temporary role: 'user' fallback.
+                    console.warn('[profile] initial fetch timed out or returned nothing - retrying in background');
                     setProfile({
                       id: sessionData.session.user.id,
                       email: (sessionData.session.user.email || '').toLowerCase(),
@@ -463,8 +499,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                       created_at: new Date().toISOString(),
                       updated_at: new Date().toISOString()
                     } as UserProfile);
-                    setProfileReady(true);
-                    loadProfileInBackground(sessionData.session.user.id);
+                    loadProfileInBackground(sessionData.session.user.id, sessionData.session.user.email);
                   }
                 }
               })
@@ -478,8 +513,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                   } as UserProfile);
-                  setProfileReady(true);
-                  loadProfileInBackground(sessionData.session.user.id);
+                  loadProfileInBackground(sessionData.session.user.id, sessionData.session.user.email);
                 }
               });
           }
@@ -573,6 +607,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 setProfile(userProfile);
                 setProfileReady(true);
               } else {
+                // Temporary profile only: keep profileReady false so the sidebar
+                // and protected routes wait for the real role + permissions.
                 const fallbackProfile: UserProfile = {
                   id: signedInUser.id,
                   email: (signedInUser.email || '').toLowerCase(),
@@ -582,13 +618,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   updated_at: new Date().toISOString()
                 };
                 setProfile(fallbackProfile);
-                setProfileReady(true);
               }
 
               setLoading(false);
 
               if (!userProfile) {
-                loadProfileInBackground(signedInUser.id);
+                loadProfileInBackground(signedInUser.id, signedInUser.email);
               }
             }
           } catch (profileError) {
@@ -602,8 +637,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               updated_at: new Date().toISOString()
             };
             setProfile(fallbackProfile);
-            setProfileReady(true);
-            loadProfileInBackground(signedInUser.id);
+            loadProfileInBackground(signedInUser.id, signedInUser.email);
           }
           clearTimeout(hardTimeoutId);
           setTimeout(() => toast.success('Signed in successfully'), 0);
@@ -683,6 +717,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setProfile(null);
     setPermissions({});
+    setPermissionsReady(false);
     setSession(null);
     setProfileReady(true);
     clearAuthTokens();
@@ -898,6 +933,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.warn('Unexpected error refreshing permissions:', error instanceof Error ? error.message : String(error));
+    } finally {
+      // Always resolve the gate, even when the query failed, so screens never
+      // sit on a spinner or fall back to role defaults while waiting.
+      if (mountedRef.current) setPermissionsReady(true);
     }
   }, [user]);
 
@@ -905,6 +944,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // granted by an admin appear in the sidebar without a fresh login.
   useEffect(() => {
     if (!user) return;
+
+    // Fetch immediately: the initial profile load can time out and fall back to
+    // a default profile with an empty permission map after a page refresh.
+    refreshPermissions();
 
     const pollInterval = setInterval(() => {
       refreshPermissions();
@@ -1011,6 +1054,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     setProfile(null);
     setPermissions({});
+    setPermissionsReady(false);
     setProfileReady(true);
     setSession(null);
     toast.info('Authentication tokens cleared. Please sign in again.');
@@ -1039,6 +1083,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     clearTokens,
     permissions,
     profileReady,
+    permissionsReady,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
