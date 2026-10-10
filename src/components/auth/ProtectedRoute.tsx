@@ -21,9 +21,9 @@ export function ProtectedRoute({
   allowedRoles,
   requiredFeature,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, session, loading, profile, permissions, profileReady } = useAuth();
+  const { isAuthenticated, session, loading, profile, permissions, profileReady, permissionsReady } = useAuth();
 
-  if (loading || (requiredFeature && isAuthenticated && !profileReady)) {
+  if (loading || (requiredFeature && isAuthenticated && (!profileReady || !permissionsReady))) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">

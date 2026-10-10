@@ -25,7 +25,7 @@ interface HeaderProps {
 }
 
 export function Header({ sidebarOpen = false, onToggleSidebar = () => {} }: HeaderProps) {
-  const { user, profile, signOut, isAuthenticated } = useAuth();
+  const { user, profile, signOut, isAuthenticated, permissions } = useAuth();
   const role = (profile?.role || 'user') as UserRole;
   const [authModal, setAuthModal] = useState<'signin' | 'forgot' | null>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -158,7 +158,7 @@ export function Header({ sidebarOpen = false, onToggleSidebar = () => {} }: Head
                     <User className="mr-2 h-4 w-4" />
                     Profile Settings
                   </DropdownMenuItem>
-                  {hasFeature(role, 'settings-company') && (
+                  {hasFeature(role, 'settings-company', permissions) && (
                     <DropdownMenuItem>
                       Company Settings
                     </DropdownMenuItem>

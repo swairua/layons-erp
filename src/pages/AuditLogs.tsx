@@ -9,7 +9,7 @@ import { hasFeature } from '@/utils/rolePermissions';
 import type { UserRole } from '@/utils/rolePermissions';
 
 export function AuditLogs() {
-  const { user, profile, loading, isAdmin } = useAuth();
+  const { user, profile, loading, isAdmin, permissions } = useAuth();
 
   // Show loading state while profile is being fetched
   if (loading) {
@@ -48,7 +48,7 @@ export function AuditLogs() {
   }
 
   const role = (profile?.role || 'user') as UserRole;
-  if (!hasFeature(role, 'audit-logs')) {
+  if (!hasFeature(role, 'audit-logs', permissions)) {
     return (
       <div className="space-y-6 p-6">
         <Alert className="border-red-200 bg-red-50">

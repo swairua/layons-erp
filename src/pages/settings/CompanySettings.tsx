@@ -26,7 +26,7 @@ import { QuickSchemaFix } from '@/components/QuickSchemaFix';
 import { addCurrencyColumn, ADD_CURRENCY_COLUMN_SQL } from '@/utils/addCurrencyColumn';
 
 export default function CompanySettings() {
-  const { profile, loading: authLoading, isAuthenticated } = useAuth();
+  const { profile, loading: authLoading, isAuthenticated, permissions } = useAuth();
   const role = (profile?.role || 'user') as UserRole;
   const [editingTax, setEditingTax] = useState<string | null>(null);
   const [newTax, setNewTax] = useState({ name: '', rate: 0, is_default: false });
@@ -767,7 +767,7 @@ export default function CompanySettings() {
     );
   }
 
-  if (!hasFeature(role, 'settings-company')) {
+  if (!hasFeature(role, 'settings-company', permissions)) {
     return (
       <div className="space-y-6 p-6">
         <Alert className="border-red-200 bg-red-50">

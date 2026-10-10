@@ -194,7 +194,7 @@ const App = () => {
             path="/quotations"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="quotations">
                   <Quotations />
                 </ProtectedRoute>
               </Suspense>
@@ -204,7 +204,7 @@ const App = () => {
             path="/quotations/new"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="quotations">
                   <Quotations />
                 </ProtectedRoute>
               </Suspense>
@@ -214,7 +214,7 @@ const App = () => {
             path="/customers"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="customers">
                   <Customers />
                 </ProtectedRoute>
               </Suspense>
@@ -224,7 +224,7 @@ const App = () => {
             path="/customers/new"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="customers">
                   <Customers />
                 </ProtectedRoute>
               </Suspense>
@@ -236,7 +236,7 @@ const App = () => {
             path="/invoices"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="invoices">
                   <Invoices />
                 </ProtectedRoute>
               </Suspense>
@@ -246,7 +246,7 @@ const App = () => {
             path="/invoices/new"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="invoices">
                   <Invoices />
                 </ProtectedRoute>
               </Suspense>
@@ -256,7 +256,7 @@ const App = () => {
             path="/cash-receipts"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="cash-receipts">
                   <CashReceipts />
                 </ProtectedRoute>
               </Suspense>
@@ -266,7 +266,7 @@ const App = () => {
             path="/cash-receipts/new"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="cash-receipts">
                   <CashReceipts />
                 </ProtectedRoute>
               </Suspense>
@@ -306,7 +306,7 @@ const App = () => {
             path="/credit-notes"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="invoices">
                   <CreditNotes />
                 </ProtectedRoute>
               </Suspense>
@@ -316,7 +316,7 @@ const App = () => {
             path="/credit-notes/new"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="invoices">
                   <CreditNotes />
                 </ProtectedRoute>
               </Suspense>
@@ -326,7 +326,7 @@ const App = () => {
             path="/proforma"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="invoices">
                   <Proforma />
                 </ProtectedRoute>
               </Suspense>
@@ -338,7 +338,7 @@ const App = () => {
             path="/boqs"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <BOQs />
                 </ProtectedRoute>
               </Suspense>
@@ -348,7 +348,7 @@ const App = () => {
             path="/fixed-boq"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <FixedBOQ />
                 </ProtectedRoute>
               </Suspense>
@@ -358,7 +358,7 @@ const App = () => {
             path="/boq/hierarchical"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <FixedBOQHierarchical />
                 </ProtectedRoute>
               </Suspense>
@@ -368,7 +368,7 @@ const App = () => {
             path="/lcl-template"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <LCLTemplate />
                 </ProtectedRoute>
               </Suspense>
@@ -378,7 +378,7 @@ const App = () => {
             path="/lcl-boq-list"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <LCLBOQList />
                 </ProtectedRoute>
               </Suspense>
@@ -388,7 +388,7 @@ const App = () => {
             path="/lpos"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <LPOs />
                 </ProtectedRoute>
               </Suspense>
@@ -398,7 +398,7 @@ const App = () => {
             path="/lpos/new"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="boqs">
                   <LPOs />
                 </ProtectedRoute>
               </Suspense>
@@ -440,7 +440,7 @@ const App = () => {
             path="/remittance"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="payments">
                   <RemittanceAdvice />
                 </ProtectedRoute>
               </Suspense>
@@ -553,10 +553,10 @@ const App = () => {
           />
 
           {/* Database Fix - Admin only */}
-          <Route path="/database-fix" element={<ProtectedRoute><DatabaseFix /></ProtectedRoute>} />
+          <Route path="/database-fix" element={<ProtectedRoute allowedRoles={['admin']}><DatabaseFix /></ProtectedRoute>} />
 
           {/* Company ID Consolidation Tool - Admin only */}
-          <Route path="/company-id-consolidation" element={<ProtectedRoute><CompanyIdConsolidation /></ProtectedRoute>} />
+          <Route path="/company-id-consolidation" element={<ProtectedRoute allowedRoles={['admin']}><CompanyIdConsolidation /></ProtectedRoute>} />
 
           {/* Audit Logs */}
           <Route
@@ -571,7 +571,7 @@ const App = () => {
           />
 
           {/* Payment Synchronization - Admin only */}
-          <Route path="/payment-sync" element={<ProtectedRoute><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PaymentSynchronizationPage /></Suspense></ProtectedRoute>} />
+          <Route path="/payment-sync" element={<ProtectedRoute allowedRoles={['admin']}><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PaymentSynchronizationPage /></Suspense></ProtectedRoute>} />
 
 
           {/* Optimized Inventory - Performance-optimized inventory page */}
@@ -579,7 +579,7 @@ const App = () => {
             path="/optimized-inventory"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="products">
                   <OptimizedInventory />
                 </ProtectedRoute>
               </Suspense>
@@ -587,7 +587,7 @@ const App = () => {
           />
 
           {/* Performance Optimizer - Admin only */}
-          <Route path="/performance-optimizer" element={<ProtectedRoute><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PerformanceOptimizerPage /></Suspense></ProtectedRoute>} />
+          <Route path="/performance-optimizer" element={<ProtectedRoute allowedRoles={['admin']}><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><PerformanceOptimizerPage /></Suspense></ProtectedRoute>} />
 
 
           {/* Optimized Customers - Performance-optimized customers page */}
@@ -595,7 +595,7 @@ const App = () => {
             path="/optimized-customers"
             element={
               <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
-                <ProtectedRoute>
+                <ProtectedRoute requiredFeature="customers">
                   <OptimizedCustomers />
                 </ProtectedRoute>
               </Suspense>
@@ -603,7 +603,7 @@ const App = () => {
           />
 
           {/* Customer Performance Optimizer - Admin only */}
-          <Route path="/customer-performance-optimizer" element={<ProtectedRoute><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><CustomerPerformanceOptimizerPage /></Suspense></ProtectedRoute>} />
+          <Route path="/customer-performance-optimizer" element={<ProtectedRoute allowedRoles={['admin']}><Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}><CustomerPerformanceOptimizerPage /></Suspense></ProtectedRoute>} />
 
 
 
