@@ -272,6 +272,20 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
     lastProfileRef.current = profile;
   }, [profile]);
 
+// Reset conflict state on mount/cleanup to prevent permanent lock after two-tab conflicts
+useEffect(() => {
+  draftConflictRef.current = false;
+  setDraftConflict(false);
+  setSaveError(null);
+  setIsSavingDraft(false);
+  return () => {
+    draftConflictRef.current = false;
+    setDraftConflict(false);
+    setSaveError(null);
+    setIsSavingDraft(false);
+  };
+}, []);
+
   // Autosave implementation with flush capability
   const performAutosave = useCallback((formData: any) => {
     const save = async () => {
@@ -330,13 +344,20 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         setSaveError(errorMsg);
         console.error('Failed to save draft:', err);
+      setIsSavingDraft(false);
       } finally {
         setIsSavingDraft(false);
       }
     };
 
-    const queuedSave = autosaveQueueRef.current.then(save, save);
-    autosaveQueueRef.current = queuedSave.catch(() => {});
+    // Skip if already saving
+if (isSavingDraft) return;
+
+// Only queue if not already queued
+if (autosaveQueueRef.current?.isRunning) return;
+
+autosaveQueueRef.current = Promise.resolve().then(save);
+return autosaveQueueRef.current;
     return queuedSave;
   }, [currentCompany?.id, profile?.id, customers]);
 
