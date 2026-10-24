@@ -30,6 +30,7 @@ export interface BOQDraftRecord {
   company_id: string;
   user_id: string;
   draft_token: string;
+  revision: number;
   number: string;
   boq_date: string;
   due_date: string;
@@ -62,13 +63,16 @@ export interface BOQDraftRecord {
  * concurrent create sessions per user/company.
  * When draftToken is provided, the draft is scoped to that token.
  */
+const draftConflictMessage = 'This draft was updated in another tab. Close and reopen it to load the latest version.';
+
 export async function saveBoqDraft(
   userId: string,
   companyId: string,
   formData: BOQDraftData,
   draftToken?: string,
-  existingDraftId?: string
-): Promise<{ success: boolean; error?: string; draftId?: string }> {
+  existingDraftId?: string,
+  expectedRevision?: number
+): Promise<{ success: boolean; error?: string; draftId?: string; revision?: number; conflict?: boolean }> {
   try {
     if (!userId || !companyId) {
       return { success: false, error: 'User ID and Company ID are required' };
@@ -112,27 +116,33 @@ export async function saveBoqDraft(
     if (draftToken) payload.draft_token = draftToken;
 
     let draftId: string | undefined;
+    let revision: number | undefined;
 
     if (existingDraftId) {
+      if (expectedRevision === undefined) {
+        return { success: false, conflict: true, error: draftConflictMessage };
+      }
       const { data, error } = await supabase
         .from('boq_drafts')
-        .update(payload)
+        .update({ ...payload, revision: expectedRevision + 1 })
         .eq('id', existingDraftId)
         .eq('user_id', userId)
         .eq('company_id', companyId)
+        .eq('revision', expectedRevision)
         .is('boq_id', null)
-        .select('id')
-        .single();
+        .select('id, revision')
+        .maybeSingle();
       if (error) {
         const errorMsg = error instanceof Error ? error.message : (error?.message || JSON.stringify(error));
         return { success: false, error: errorMsg };
       }
-      draftId = data?.id;
+      if (!data) return { success: false, conflict: true, error: draftConflictMessage };
+      draftId = data.id;
+      revision = data.revision;
     } else if (draftToken) {
-      // Scoped lookup by draft_token
       const { data: existingDraft, error: fetchError } = await supabase
         .from('boq_drafts')
-        .select('id')
+        .select('id, revision')
         .eq('draft_token', draftToken)
         .eq('user_id', userId)
         .eq('company_id', companyId)
@@ -146,38 +156,45 @@ export async function saveBoqDraft(
       }
 
       if (existingDraft?.id) {
+        if (expectedRevision === undefined) {
+          return { success: false, conflict: true, error: draftConflictMessage };
+        }
         const { data, error } = await supabase
           .from('boq_drafts')
-          .update(payload)
+          .update({ ...payload, revision: expectedRevision + 1 })
           .eq('id', existingDraft.id)
-          .select('id')
-          .single();
+          .eq('revision', expectedRevision)
+          .select('id, revision')
+          .maybeSingle();
 
         if (error) {
           const errorMsg = error instanceof Error ? error.message : (error?.message || JSON.stringify(error));
           console.error('[saveBoqDraft] Update failed:', errorMsg);
           return { success: false, error: errorMsg };
         }
-        draftId = data?.id;
+        if (!data) return { success: false, conflict: true, error: draftConflictMessage };
+        draftId = data.id;
+        revision = data.revision;
       } else {
         const { data, error } = await supabase
           .from('boq_drafts')
           .insert([payload])
-          .select('id')
+          .select('id, revision')
           .single();
 
         if (error) {
+          if (error.code === '23505') return { success: false, conflict: true, error: draftConflictMessage };
           const errorMsg = error instanceof Error ? error.message : (error?.message || JSON.stringify(error));
           console.error('[saveBoqDraft] Insert failed:', errorMsg);
           return { success: false, error: errorMsg };
         }
-        draftId = data?.id;
+        draftId = data.id;
+        revision = data.revision;
       }
     } else {
-      // Fallback: single-slot lookup (backward compat, no draft token)
       const { data: existingDraft, error: fetchError } = await supabase
         .from('boq_drafts')
-        .select('id')
+        .select('id, revision')
         .eq('user_id', userId)
         .eq('company_id', companyId)
         .is('boq_id', null)
@@ -191,24 +208,30 @@ export async function saveBoqDraft(
       }
 
       if (existingDraft?.id) {
+        if (expectedRevision === undefined) {
+          return { success: false, conflict: true, error: draftConflictMessage };
+        }
         const { data, error } = await supabase
           .from('boq_drafts')
-          .update(payload)
+          .update({ ...payload, revision: expectedRevision + 1 })
           .eq('id', existingDraft.id)
-          .select('id')
-          .single();
+          .eq('revision', expectedRevision)
+          .select('id, revision')
+          .maybeSingle();
 
         if (error) {
           const errorMsg = error instanceof Error ? error.message : (error?.message || JSON.stringify(error));
           console.error('[saveBoqDraft] Update failed:', errorMsg);
           return { success: false, error: errorMsg };
         }
-        draftId = data?.id;
+        if (!data) return { success: false, conflict: true, error: draftConflictMessage };
+        draftId = data.id;
+        revision = data.revision;
       } else {
         const { data, error } = await supabase
           .from('boq_drafts')
           .insert([payload])
-          .select('id')
+          .select('id, revision')
           .single();
 
         if (error) {
@@ -216,12 +239,13 @@ export async function saveBoqDraft(
           console.error('[saveBoqDraft] Insert failed:', errorMsg);
           return { success: false, error: errorMsg };
         }
-        draftId = data?.id;
+        draftId = data.id;
+        revision = data.revision;
       }
     }
 
     console.log(`[saveBoqDraft] Successfully saved/updated draft with ID: ${draftId}`);
-    return { success: true, draftId };
+    return { success: true, draftId, revision };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[saveBoqDraft] Unexpected error:', errorMsg);

@@ -117,6 +117,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastAutosavedAt, setLastAutosavedAt] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [draftConflict, setDraftConflict] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [authReadyError, setAuthReadyError] = useState<string | null>(null);
   const [isHydrating, setIsHydrating] = useState(true);
@@ -128,6 +129,9 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   const formStateRef = useRef<any>({});
   const draftTokenRef = useRef<string>(generateSafeUUID());
   const draftIdRef = useRef<string | null>(null);
+  const draftRevisionRef = useRef<number | undefined>(undefined);
+  const draftConflictRef = useRef(false);
+  const autosaveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const loadedDraftTokenRef = useRef<string | null>(null);
 
   const todayISO = new Date().toISOString().split('T')[0];
@@ -209,11 +213,13 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       try {
         draftTokenRef.current = initialDraftToken;
         const draft = await loadBoqDraft(profile.id, currentCompany.id, initialDraftToken);
-        if (draft?.data) {
+        if (draft) {
           draftIdRef.current = draft.id;
+          draftRevisionRef.current = draft.revision;
           if (isDraftStale(draft.last_autosaved_at, 30 * 60 * 1000)) {
             console.log('[CreateBOQModal] Draft is stale, deleting and starting fresh');
             draftIdRef.current = null;
+            draftRevisionRef.current = undefined;
             const deleteResult = await deleteDraft(profile.id, currentCompany.id, initialDraftToken);
             if (!deleteResult.success) {
               console.error('[CreateBOQModal] Failed to delete stale draft:', deleteResult.error);
@@ -267,58 +273,71 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   }, [profile]);
 
   // Autosave implementation with flush capability
-  const performAutosave = useCallback(async (formData: any) => {
-    if (!currentCompany?.id || !profile?.id) {
-      const reason = !currentCompany?.id ? 'Company not loaded yet' : 'Auth not ready yet';
-      console.warn('[CreateBOQModal] Autosave deferred: ' + reason, { companyId: currentCompany?.id, profileId: profile?.id });
-      setAuthReadyError(reason);
-      return;
-    }
-
-    try {
-      setIsSavingDraft(true);
-      setSaveError(null);
-      setAuthReadyError(null);
-
-      const selectedCustomer = customers.find(c => c.id === formData.clientId);
-      const result = await saveBoqDraft(profile.id, currentCompany.id, {
-        boqNumber: formData.boqNumber,
-        boqDate: formData.boqDate,
-        dueDate: formData.dueDate,
-        clientId: formData.clientId,
-        customerName: selectedCustomer?.name,
-        customerEmail: selectedCustomer?.email,
-        customerPhone: selectedCustomer?.phone,
-        customerAddress: selectedCustomer?.address,
-        customerCity: selectedCustomer?.city,
-        customerCountry: selectedCustomer?.country,
-        projectTitle: formData.projectTitle,
-        contractor: formData.contractor,
-        notes: formData.notes,
-        termsAndConditions: formData.termsAndConditions,
-        showCalculatedValuesInTerms: formData.showCalculatedValuesInTerms,
-        currency: formData.currency,
-        taxAmount: formData.taxAmount,
-        attachmentUrl: formData.attachmentUrl,
-        boqStatus: formData.boqStatus,
-        sections: formData.sections,
-      }, draftTokenRef.current, draftIdRef.current || undefined);
-
-      if (result.success) {
-        if (result.draftId) draftIdRef.current = result.draftId;
-        setLastAutosavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        setHasUnsavedChanges(false);
-      } else {
-        setSaveError(result.error || 'Failed to save draft');
-        console.error('Autosave failed:', result.error);
+  const performAutosave = useCallback((formData: any) => {
+    const save = async () => {
+      if (draftConflictRef.current) return;
+      if (!currentCompany?.id || !profile?.id) {
+        const reason = !currentCompany?.id ? 'Company not loaded yet' : 'Auth not ready yet';
+        console.warn('[CreateBOQModal] Autosave deferred: ' + reason, { companyId: currentCompany?.id, profileId: profile?.id });
+        setAuthReadyError(reason);
+        return;
       }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      setSaveError(errorMsg);
-      console.error('Failed to save draft:', err);
-    } finally {
-      setIsSavingDraft(false);
-    }
+
+      try {
+        setIsSavingDraft(true);
+        setSaveError(null);
+        setAuthReadyError(null);
+
+        const selectedCustomer = customers.find(c => c.id === formData.clientId);
+        const result = await saveBoqDraft(profile.id, currentCompany.id, {
+          boqNumber: formData.boqNumber,
+          boqDate: formData.boqDate,
+          dueDate: formData.dueDate,
+          clientId: formData.clientId,
+          customerName: selectedCustomer?.name,
+          customerEmail: selectedCustomer?.email,
+          customerPhone: selectedCustomer?.phone,
+          customerAddress: selectedCustomer?.address,
+          customerCity: selectedCustomer?.city,
+          customerCountry: selectedCustomer?.country,
+          projectTitle: formData.projectTitle,
+          contractor: formData.contractor,
+          notes: formData.notes,
+          termsAndConditions: formData.termsAndConditions,
+          showCalculatedValuesInTerms: formData.showCalculatedValuesInTerms,
+          currency: formData.currency,
+          taxAmount: formData.taxAmount,
+          attachmentUrl: formData.attachmentUrl,
+          boqStatus: formData.boqStatus,
+          sections: formData.sections,
+        }, draftTokenRef.current, draftIdRef.current || undefined, draftRevisionRef.current);
+
+        if (result.success) {
+          if (result.draftId) draftIdRef.current = result.draftId;
+          draftRevisionRef.current = result.revision;
+          setLastAutosavedAt(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+          setHasUnsavedChanges(false);
+        } else if (result.conflict) {
+          draftConflictRef.current = true;
+          setDraftConflict(true);
+          setSaveError(result.error || 'This draft was updated in another tab.');
+          setHasUnsavedChanges(true);
+        } else {
+          setSaveError(result.error || 'Failed to save draft');
+          console.error('Autosave failed:', result.error);
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        setSaveError(errorMsg);
+        console.error('Failed to save draft:', err);
+      } finally {
+        setIsSavingDraft(false);
+      }
+    };
+
+    const queuedSave = autosaveQueueRef.current.then(save, save);
+    autosaveQueueRef.current = queuedSave.catch(() => {});
+    return queuedSave;
   }, [currentCompany?.id, profile?.id, customers]);
 
   // Create debounced autosave function with manual flush capability (memoized for stability)
@@ -375,7 +394,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   // Helper to mark changes and clear any previous errors for auto-retry
   const markChanged = useCallback(() => {
     setHasUnsavedChanges(true);
-    if (saveError) setSaveError(null);
+    if (saveError && !draftConflictRef.current) setSaveError(null);
   }, [saveError]);
 
   const selectedClient = useMemo(() => customers.find(c => c.id === clientId), [customers, clientId]);
@@ -533,6 +552,10 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   };
 
   const handleGenerate = async () => {
+    if (draftConflictRef.current) {
+      toast.error('This draft changed in another tab. Close and reopen it before creating the BOQ.');
+      return;
+    }
     if (!validate()) return;
     if (!selectedClient) { toast.error('Invalid client'); return; }
 
@@ -547,6 +570,11 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
 
     setSubmitting(true);
     try {
+      await performAutosave(formStateRef.current);
+      if (draftConflictRef.current) {
+        toast.error('This draft changed in another tab. Close and reopen it before creating the BOQ.');
+        return;
+      }
       await generateAndSaveBOQ();
     } catch (err) {
       console.error('Failed to save BOQ', err);
@@ -744,6 +772,7 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
   };
 
   const handleClearForm = async () => {
+    if (draftConflictRef.current) return;
     // Reset all form fields to default values
     setBoqNumber(defaultNumber);
     setBoqDate(todayISO);
@@ -764,6 +793,8 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
       const deleteResult = await deleteDraft(profile.id, currentCompany.id, draftTokenRef.current);
 
       if (deleteResult.success) {
+        draftIdRef.current = null;
+        draftRevisionRef.current = undefined;
         toast.success('Form cleared and draft reset');
       } else {
         toast.error('Failed to clear draft: ' + deleteResult.error);
@@ -790,9 +821,10 @@ export function CreateBOQModal({ open, onOpenChange, onSuccess, company, initial
                 lastSavedTime={lastAutosavedAt}
                 hasUnsavedChanges={hasUnsavedChanges}
                 saveError={saveError}
+                isConflict={draftConflict}
               />
               {lastAutosavedAt && (
-                <Button variant="outline" size="sm" onClick={handleClearForm} className="w-full sm:w-auto">
+                <Button variant="outline" size="sm" onClick={handleClearForm} disabled={draftConflict} className="w-full sm:w-auto">
                   Reset Draft
                 </Button>
               )}
