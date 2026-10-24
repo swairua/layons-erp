@@ -6,6 +6,7 @@ interface BOQSaveIndicatorProps {
   lastSavedTime: string | null;
   hasUnsavedChanges: boolean;
   saveError?: string | null;
+  isConflict?: boolean;
 }
 
 export function BOQSaveIndicator({
@@ -13,6 +14,7 @@ export function BOQSaveIndicator({
   lastSavedTime,
   hasUnsavedChanges,
   saveError,
+  isConflict = false,
 }: BOQSaveIndicatorProps) {
   const [showSavingIndicator, setShowSavingIndicator] = useState(false);
 
@@ -33,7 +35,7 @@ export function BOQSaveIndicator({
     return (
       <div className="flex items-center gap-2 text-sm text-red-600" title={saveError}>
         <AlertCircle className="h-4 w-4 flex-shrink-0" />
-        <span className="truncate">Save failed — will retry</span>
+        <span className="truncate">{isConflict ? 'Changed in another tab — close and reopen' : 'Save failed — will retry'}</span>
       </div>
     );
   }
